@@ -1,4 +1,6 @@
 <?php
+// $Id$ 
+
 class ODMMessage {
   public $body; // string
   public $emailColumn; // string
