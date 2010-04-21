@@ -1,0 +1,45 @@
+<?php
+
+function govdelivery_install(){
+  drupal_install_schema('govdelivery');
+}
+
+function govdelivery_uninstall() {
+  drupal_uninstall_schema('govdelivery');
+  variable_del('smtp_library');
+  variable_del('govdelivery_settings');
+  variable_del('govdelivery_test_settings');
+}
+
+
+function govdelivery_schema() {
+  $schema['cache_govdelivery'] = drupal_get_schema_unprocessed('system', 'cache');
+  return $schema;  
+}
+
+function govdelivery_update_6001() {
+  $ret = array();
+  db_rename_table($ret, 'cache_govdelivery', 'govdelivery_queue');
+  return $ret;
+}
+
+function govdelivery_update_6002() {
+  $ret = array();
+  
+  $govdelivery_settings=variable_get('govdelivery_settings', array());
+  
+  if ( isset($govdelivery_settings) && isset($govdelivery_settings['username']) ) {
+    $accounts[$govdelivery_settings['username']] = array(
+      'password' => $govdelivery_settings['password'],
+      'fromname' => $govdelivery_settings['fromname']
+    );
+    unset($govdelivery_settings['fromname']);
+    unset($govdelivery_settings['username']);
+    unset($govdelivery_settings['password']);
+    $govdelivery_settings['accounts'] = $accounts;
+    variable_set('govdelivery_settings', $govdelivery_settings);
+    $ret[] = "Converted GovDelivery settings to multiple account format.";
+  }
+  
+  return $ret;
+}

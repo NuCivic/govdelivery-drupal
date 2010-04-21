@@ -1,0 +1,614 @@
+<?php
+
+function govdelivery_perm() {
+  return array('Manage GovDelivery Settings');
+}
+
+function govdelivery_menu() {
+  $items['admin/settings/govdelivery'] = array(
+    'title' => 'GovDelivery Settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('govdelivery_settings'),
+    'access arguments' => array('Manage GovDelivery Settings'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  
+  $items['admin/settings/govdelivery_test'] = array(
+    'title' => 'GovDelivery Settings test',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('govdelivery_test_settings'),
+    'access arguments' => array('Manage GovDelivery Settings'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  
+  $items['admin/reports/govdelivery_queue'] = array(
+    'title' => 'GovDelivery Queue',
+    'description' => 'View current items in the queue.',
+    'page callback' => 'govdelivery_queue_report',
+    'page arguments' => array(''),
+    'access arguments' => array('Manage GovDelivery Settings'),
+    'type' => MENU_NORMAL_ITEM,
+  );  
+	$items['govdelivery_details'] = array(
+	  'title' => 'GovDelivery Message Details',
+	  'description' => 'Details of a queued messaged',
+		'page callback' => 'govdelivery_details',
+		'page arguments' => array(),
+		'access arguments' => array('Manage GovDelivery Settings'),
+		'type' => MENU_CALLBACK,
+	);
+  
+  return $items;
+}
+
+
+function govdelivery_settings() {
+  $govdelivery_settings = variable_get('govdelivery_settings', array());
+  
+  $account_fieldset = array(
+    '#type'=>'fieldset',
+    '#title'=>'Mail Accounts',
+  );
+  
+  if (isset($govdelivery_settings) && isset($govdelivery_settings['accounts']) && is_array($govdelivery_settings['accounts'])) {
+    foreach ($govdelivery_settings['accounts'] as $username => $account_settings) {
+      $account_fieldset[$username . '%###%'  . 'fromname'] = array(
+          '#type' => "textfield",
+          '#title' => 'From Name',
+          '#default_value' => $account_settings['fromname'],
+        );
+      $account_fieldset[$username . '%###%' . 'username'] = array(
+          '#type' => "textfield",
+          '#title' => 'Username',
+          '#default_value' => $username,
+        );
+      $account_fieldset[$username . '%###%' . 'password'] = array(
+        '#type' => "textfield",
+        '#title' => 'Password',
+        '#default_value' => $account_settings['password'],
+      );
+    }
+  }
+  
+  $account_fieldset['fromname'] = array(
+    '#type' => "textfield",
+    '#title' => 'From Name',
+  );
+  $account_fieldset['username'] = array(
+    '#type' => "textfield",
+    '#title' => 'Username',
+  );
+  $account_fieldset['password'] = array(
+    '#type' => "textfield",
+    '#title' => 'Password',
+  );
+  
+  $form=array(
+    'govdelivery_settings' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Mail Server Settings',
+      '#tree' => true,  
+      'accounts' => $account_fieldset,
+      'server' => array(
+        '#type' => "textfield",
+        '#title' => 'server',
+        '#default_value' => $govdelivery_settings['server'],
+      ),
+      'enabled' => array(
+        '#type' => 'radios',
+        '#default_value' => $govdelivery_settings['enabled'],
+        '#title' => 'Outbound mail rerouting',
+        '#options' => array('Disabled','Enabled'),
+      ),
+      'queue' => array(
+        '#type' => 'radios',
+        '#default_value' => $govdelivery_settings['queue'],
+        '#title' => 'Queue Messages (Messages that fail to send are queued regardless of this setting)',
+        '#options' => array('Disabled','Enabled'),        
+      ),
+    ),
+    'save' => array('#type'=>'submit','#value'=>'Save Configuration'),
+  );
+  return $form;
+//  return system_settings_form($form);
+}
+
+function govdelivery_settings_submit($form, $postinfo) {
+  // change around the account storage to an associative array indexed by username
+  $govdelivery_settings = $postinfo['values']['govdelivery_settings'];
+  $new_account = array();
+  $account_settings = array();
+  
+  foreach ($govdelivery_settings['accounts'] as $composite_key => $value) {
+    // if we don't have a value we don't want to do anything
+    if (isset($value) && !empty($value)) { 
+      print "value is $value \n";
+      $key_elements = explode('%###%', $composite_key);
+      if (count($key_elements) == 2) {
+        $username = $key_elements[0];
+        $field = $key_elements[1];
+      
+        if (!isset($account_settings[$username]) && isset($username) && !empty($username)) {
+          $account_settings[$username] = array();
+        }
+        if ($field != 'username') {
+          $account_settings[$username][$field] = $value;
+        }
+      } else {
+        if (isset($key_elements[0])) {
+          $new_account[$key_elements[0]] = $value;
+        }
+      }  
+    }
+  }
+  
+  if (isset($new_account['username'])) {
+    $account_settings[$new_account['username']] = array(
+      "password" => $new_account['password'],
+      "fromname" => $new_account['fromname'],
+    );
+  }
+
+  $govdelivery_settings['accounts'] = $account_settings;
+  
+  variable_set('govdelivery_settings', $govdelivery_settings);
+  if($postinfo['values']['govdelivery_settings']['enabled'] == 1){
+    $path = drupal_get_path('module', 'govdelivery');
+    variable_set('smtp_library', $path . "/govdelivery_library.inc");
+  }
+  else{
+    variable_del('smtp_library');
+  }
+}
+
+// Send a test message to the specificed addresses.
+function govdelivery_test_settings() {
+  $form = array(
+    'govdelivery_test_settings' => array(
+      '#type' => 'fieldset',
+      '#title' => 'GovDelivery Test Settings',
+  		'#tree' => true,
+			'recipients' => array(
+			  '#type' => 'textfield',
+			  '#title' => 'Recipient\'s Email (Comma seperated)',		
+			),  
+	    'test' => array(
+	      '#type' => 'submit',
+	      '#value' => 'Test send message',
+	    ),
+	  ),
+  );
+  
+  return $form;
+}
+
+function govdelivery_test_settings_submit($form, $postinfo) { 
+	$recipients = $postinfo['values']['govdelivery_test_settings']['recipients'];
+	// Save settings and Send message.
+	if(isset($recipients) && !empty($recipients)) {
+		// Pass on the list to be sent.
+  	$status = govdelivery_send_test_message($recipients);
+	}
+	drupal_set_message('Your test message has been sent.'); 
+}
+
+function govdelivery_send_test_message($send_to) {
+  return drupal_mail('govdelivery', 'test_id', $send_to, array(), NULL, TRUE);
+}
+
+function govdelivery_mail($key, &$message, $params) {
+  $message['subject'] = 'GovDelivery test message';
+  if (isset($_SERVER['HTTP_HOST'])) {
+    $_SERVER['HTTP_HOST'] = strtolower($_SERVER['HTTP_HOST']);
+    if (drupal_valid_http_host($_SERVER['HTTP_HOST'])) {
+      $message['subject'] = 'GovDelivery test message: ' . $_SERVER['HTTP_HOST'];
+    } 
+  }
+  $message['body'] = "This is a test message from the GovDelivery system";
+}
+
+function govdelivery_cron() {
+  $messages_sent = govdelivery_process_queue();
+}
+
+function govdelivery_process_queue($messages = NULL, $ignore_max_time = FALSE, $cid=NULL) {
+  // checks for maximum execution time cribbed from the job_queue module: drupal.org/project/job_queue
+  $max_execution_time = ini_get('max_execution_time');
+  if (!$ignore_max_time && empty($max_execution_time)) {
+    $max_execution_time = 5 * 60;
+  }
+  
+  $start_time = (timer_read('page') / 1000);
+  
+  // setting a simple semaphore to avoid parallelism issues
+  $semaphore = variable_get('govdelivery_semaphore', FALSE);  
+  if ($semaphore) {
+    watchdog('govdelivery', 'Attempting to re-run govdelivery queue processing while it is already running.', array(), WATCHDOG_WARNING);
+    return FALSE;
+  } else {    
+    // in case we are aborted, register a shutdown callback
+    register_shutdown_function('govdelivery_process_queue_cleanup');
+    
+    variable_set('govdelivery_semaphore', time());
+    $messages_sent = 0;
+    
+		$cache_queue = db_query("select cid from {govdelivery_queue} order by created asc");
+    
+    while($queue_key = db_fetch_object($cache_queue)) {
+      // check our status against the maximum execution time for a request, and if we've used half of it we want to 
+      // stop processing - it was formerly checking whether half the time was used, rather than whether we had used 
+      // half of it in this module
+      if (!$ignore_max_time && ( ((timer_read('page') / 1000) - $start_time ) > ($max_execution_time / 2))) {
+        watchdog('govdelivery', 'Half of the available PHP execution time of %max_execution_time has been use processing the GovDelivery queue and processing will not continue.', 
+          array( '%max_execution_time' => $max_execution_time), WATCHDOG_WARNING);
+        break;   // Stop once we have used over half of the maximum execution time 
+      }
+
+      $i = $queue_key->cid;
+      // Only send one message from the queue if a cid is passed in
+      // If the cid is null or blank process the queue as normal
+      if((!empty($cid) && $i == $cid) || (empty($cid))) {
+	      // get the most recently cached message
+	      $message = govdelivery_queue_get($i);
+	      // if this message is still in the cache
+	      if($message) {      
+	        // resend the message
+	        $status = govdelivery_send_message($message);
+	        if($status) {
+	          govdelivery_queue_remove($i);
+	          $messages_sent++;
+	        }
+	      }
+      }
+      if (isset($messages) && ( $messages_sent >= $messages )) break;   // break if we've sent the requested number of messages
+    }
+    watchdog('govdelivery', 'Sent %messages messages when processing the govdelivery queue.', array( '%messages' => $messages_sent), WATCHDOG_INFO);
+    variable_del('govdelivery_semaphore');
+    return $messages_sent;
+  }
+}
+
+function govdelivery_process_queue_cleanup() {
+  if (variable_get('govdelivery_semaphore', FALSE)) {
+    watchdog('govdelivery', 'GovDelivery queue processing was aborted unexpectedly.  This could mean that the maximum execution time was exceeded or an uncaught exception occured in SOAP processing.', array(), WATCHDOG_WARNING);
+
+    // Release cron semaphore
+    variable_del('govdelivery_semaphore');
+  }
+}
+
+function govdelivery_queue_get($cid) {
+  global $user;
+  $table = 'govdelivery_queue';
+
+  $message = db_fetch_object(db_query("SELECT data, created, headers, expire, serialized FROM {". $table ."} WHERE cid = '%s'", $cid));
+  if (isset($message->data)) {
+    // If the data is permanent or we're not enforcing a minimum cache lifetime
+    // always return the cached data.
+    $message->data = db_decode_blob($message->data);
+    if ($message->serialized) {
+        $message->data = unserialize($message->data);
+    }
+    return $message->data;
+  }
+  return 0;
+}
+
+function govdelivery_queue_set($cid, $data) {
+  $table = 'govdelivery_queue';
+  $serialized = 0;
+  if (is_object($data) || is_array($data)) {
+    $data = serialize($data);
+    $serialized = 1;
+  }
+  $created = time();
+  db_query("UPDATE {". $table ."} SET data = %b, created = %d, serialized = %d WHERE cid = '%s'", $data, $created, $expire, $headers, $serialized, $cid);
+  if (!db_affected_rows()) {
+    @db_query("INSERT INTO {". $table ."} (cid, data, created, serialized) VALUES ('%s', %b, %d, %d)", $cid, $data, $created, $serialized);
+  }
+}
+
+function govdelivery_queue_remove($cid) {
+  global $user;
+  $table = 'govdelivery_queue';
+  db_query("DELETE FROM {" . $table . "} WHERE cid = '%s'", $cid);
+}
+  
+function govdelivery_send_message($message) {
+  $govdelivery_settings = variable_get('govdelivery_settings', array());  
+  $sendsuccess = true;
+  
+  if(class_exists('SoapClient')) {
+    include_once('odmService.php');
+    
+    $email = new odmService($govdelivery_settings['server']);
+    
+    $ODMmessage = new ODMMessage();
+    
+    $recipients = array();
+    if(is_array($message["to"])) {
+      foreach($message["to"] as $address) {
+        $tolist=explode(',', $address);
+        if(is_array($tolist)) {
+          $filtered_list = array_map("govdelivery_filter_email", $tolist);
+          $recipients = array_merge($recipients, $filtered_list);
+        }
+        else {
+          $recipients[] = govdelivery_filter_email($tolist);
+        }
+      }
+    }
+    else {
+      $recipients = explode(',',$message["to"]);
+    }
+
+    $ODMmessage->to = (array)$recipients;
+    $account_map = variable_get("govdelivery_account_map", null);
+
+    if (isset($account_map)) {
+      $account = $account_map[$message["id"]];
+      if (!isset($account)) {
+        $account = $account_map["default"];
+        if (!isset($account)) {
+          watchdog('govdelivery', 'No default account specified.  Check settings.php.', null, WATCHDOG_ERROR);
+          return false;
+        }
+      }
+
+      $ODMmessage->fromName = $govdelivery_settings['accounts'][$account]['fromname'];
+      $ODMmessage->userName = $account;
+      $ODMmessage->password = $govdelivery_settings['accounts'][$account]['password'];          
+    } else {
+      watchdog('govdelivery', 'GovDelivery account mapping has not been set.  Check settings.php.', null, WATCHDOG_ERROR);
+      return false;
+    }
+    
+    // check for XML/XHTML or oldstyle html
+    $xml_start = strpos(trim($message["body"]), "<?xml");
+    $html_start = strpos(trim($message["body"]), "<html");
+
+    // GovDelivery doesn't let us set the MIME type, it will send as text/html ... wrap with <pre> to 
+    // allow for clean formatting if message isn't XML or HTML already
+    if ($xml_start === 0 && $html_start === 0) {
+      $ODMmessage->body = $message["body"];
+    } else {
+      $ODMmessage->body = '<pre>' . $message["body"] . '</pre>';      
+    }
+    $ODMmessage->subject = $message["subject"];
+    $ODMmessage->recordDesignator = "email";
+    $ODMmessage->emailColumn = "email";
+    
+    $status = $email->sendMessage($ODMmessage);
+    if ($status) {
+      $sendsuccess = !$status[0]; // 0 is successfull !0 is fail.
+    } else {
+      $sendsucces = false;
+    }
+  }
+  else {
+    $sendsuccess = false;
+  }
+  
+  if (!$sendsuccess) {
+    watchdog('govdelivery','The soap client failed to send a message. It will be queued for resend on the next cron run', null, WATCHDOG_WARNING);
+  }
+  
+  return $sendsuccess;
+}
+
+// the user may have put in an address of the form "Full Name" <email@domain.tld> instead of just the address,
+// so we want to filter to the right address
+function govdelivery_filter_email($address) {
+  
+  // borrowed from the drupal valid_email_address($mail) function
+  $user = '[a-zA-Z0-9_\-\.\+\^!#\$%&*+\/\=\?\`\|\{\}~\']+';
+  $domain = '(?:(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.?)+';
+  $ipv4 = '[0-9]{1,3}(\.[0-9]{1,3}){3}';
+  $ipv6 = '[0-9a-fA-F]{1,4}(\:[0-9a-fA-F]{1,4}){7}';
+  
+  // setup an array for the matching expression
+  $matches = array();
+  
+  // the regex below is adapted from drupal's valid_email_address($mail) function
+  preg_match("/$user@($domain|(\[($ipv4|$ipv6)\]))/", $address, $matches);
+  return $matches[0];
+}
+
+
+// Send messages immediately or to the queue if enabled.
+function govdelivery_process_message($key, $message) {
+	//Check preferences
+	$govdelivery_settings = variable_get('govdelivery_settings', array());
+	$send_success = false;
+	
+	//Attempt to send immediately
+  if (isset($govdelivery_settings['queue']) && !$govdelivery_settings['queue']){  	
+  	$send_success = govdelivery_send_message($message);
+  	
+  	if($send_success) {
+  		watchdog('govdelivery', 'Successfully sent a message immediately.', array(), WATCHDOG_INFO);
+  	}
+  }
+  
+  // Queue the message if:
+  // 1. Failure to send immediately
+  // 2. Queue preferences haven't been set
+  // 3. Queue is enabled
+  if (!$send_success){
+  	govdelivery_queue_set($key, $message);
+  }
+}// End govdelivery_send.
+
+// Report of the GovDelivery Queues status.
+// Subject lines are links to a details page.
+function govdelivery_queue_report() {
+	$table = 'govdelivery_queue';
+  // Setup table fields mapping to the data.
+  $header = array(
+    array('data' => 'Subject',),
+    array('data' => 'Created', 'field' => 'day', 'sort'=>'desc'),
+    array('data' => 'Form',),
+  );
+
+  // Query the database for the data.
+  $dataquery = "SELECT FROM_DAYS(TO_DAYS(FROM_UNIXTIME(created))) day, cid FROM {". $table ."} GROUP BY day, cid " . tablesort_sql($header);	
+	$countquery = "SELECT COUNT(*) FROM {". $table ."}";
+  $result = pager_query($dataquery, 30, 0, $countquery);
+
+	// Assign data to rows.
+  $rows = array();
+  while ($queuedmessage = db_fetch_object($result)) {
+  	// Get the message unserialized.
+  	$queuedmessage->data = govdelivery_queue_get($queuedmessage->cid);	   
+		// Build the row.
+		if($queuedmessage->data != 0) {
+	  	$rows[] = array(l($queuedmessage->data['subject'], 'govdelivery_details/' . $queuedmessage->cid), $queuedmessage->day, $queuedmessage->data['id'],);
+		}
+  }// End while.
+
+  // Empty dataset message.
+  if (empty($rows)) {
+    $rows[] = array(array('data' => 'No messages currently in the queue.', 'colspan' => 3));
+  }
+  
+  $output  = theme('table', $header, $rows);
+  $output .= theme('pager', NULL, 30, 0);
+
+  return $output;
+}// End govdelivery_queue_status.
+
+
+// View a single message in the queue.
+function govdelivery_details($cid) {
+	// Build a table to display the message details.
+	if(!empty($cid)) {
+		// Get the message unserialized.
+		$queuedmessage = govdelivery_queue_get($cid);	
+		if($queuedmessage != 0) {	
+			// Setup table fields mapping to the data.
+		  $header = array(
+		    array('data' => 'Field',),
+		    array('data' => 'Value',),
+		  );
+		  // Setup the rows.
+	  	$rows=array(
+		  	array('CID', $cid),
+		  	array('ID', $queuedmessage['id'],),
+	  		array('To', $queuedmessage['to'],),
+	  		array('Errors-To', $queuedmessage['headers']['Errors-To'],),
+	  		array('Return-Path', $queuedmessage['headers']['Return-Path'],),
+	  		array('Sender', $queuedmessage['headers']['Sender'],),
+	  		array('Language', $queuedmessage['language'],),
+	  		array('Parameters', $queuedmessage['params'],),
+	  		array('Subject', $queuedmessage['subject'],),
+				array('Body', $queuedmessage['body'],),
+			);
+		}
+	}
+
+  // Empty dataset message.
+  // If the data set is empty dont load the form.
+  if (empty($rows)) {
+    $rows[] = array(array('data' => 'Message no longer in the queue.', 'colspan' => 2));
+  }
+  else {
+  	$output .= drupal_get_form('govdelivery_details_form', $cid);
+  }
+  $output .= theme('table', $header, $rows);
+	
+  return $output;
+}
+
+// A form to send a message immediately.
+function govdelivery_details_form($form, $cid) {
+	$form = array(
+  	'govdelivery_details' => array(
+  		'#type' => 'fieldset',
+      '#title' => 'Message Actions',
+      '#tree' => true,  
+      '#collapsible' => true,
+      'cid' => array('#type' => 'value', '#value' => $cid),
+    	'send' => array('#type' => 'submit', '#value' => 'Send Now'),
+  	),
+  );
+	return $form;
+}
+
+function govdelivery_details_form_submit($form, &$postinfo) {
+	$cid = $postinfo['values']['govdelivery_details']['cid'];
+	// Send the message from the queue immediately.
+	if(!empty($cid)) {
+		$sent = govdelivery_process_queue(NULL, FALSE, $cid);
+		drupal_set_message('Messages sent from the queue: '. $sent);
+	}
+	$postinfo['redirect'] = 'admin/reports/govdelivery_queue';
+}
+
+// Implement nagios_info hook to allow enabling/disabling our nagios notifications.
+function govdelivery_nagios_info() {
+  return array(
+    'name'   => 'GovDelivery',
+    'id'     => 'GovDelivery',
+  );
+} // End govdelivery_nagios_info.
+
+// Implement nagios() hook to send data about the queue status to nagios.
+function govdelivery_nagios() {
+	$table = 'govdelivery_queue';
+	  
+  // Get the user settings.
+  $critical_threshold = variable_get('govdelivery_nagios_critical_threshold', 5000);
+  $warning_threshold = variable_get('govdelivery_nagios_warning_threshold', 1000);
+	
+	// Query for a backlog.
+	$count = db_result(db_query('SELECT COUNT(cid) FROM {'. $table .'}'));
+ 
+  if (isset($count)) {
+  	if ($count > $critical_threshold) {
+	  	$status = NAGIOS_STATUS_CRITICAL;
+	    $text = "GovDelivery has $count backlogged messages in the queue";
+	  }
+	  elseif ($count > $warning_threshold) {
+	  	$status = NAGIOS_STATUS_WARNING;
+	    $text = "GovDelivery has $count backlogged messages in the queue";
+	  }
+	  else {
+	    $status = NAGIOS_STATUS_OK;
+	    $text = '';
+	  }
+  }
+  else {
+  	$status = NAGIOS_STATUS_UNKNOWN;
+    $text = "GovDelivery can't determine the queue status";
+  }
+  
+  return array(
+    'key' => 'GovDelivery',
+    'data' => array(
+      'status' => $status,
+      'type' => 'state',
+      'text' => $text,
+    )
+  );
+}// End govdelivery_nagios.
+
+// Add settings to the nagios configuration page.
+function govdelivery_nagios_settings() {
+  $form = array (
+		'GovDelivery' => array (
+		  'govdelivery_nagios_critical_threshold' => array(
+			    '#type'          => 'textfield',
+			    '#title'         => t('Critical Threshold'),
+			    '#default_value' => variable_get('govdelivery_nagios_critical_threshold', 5000),
+			    '#description'   => t('Issue a critical alert when GovDelivery has this number of messages queued. (Make this greater then the warning number)'),
+		  ),
+		  'govdelivery_nagios_warning_threshold' => array(
+			  	'#type'          => 'textfield',
+			    '#title'         => t('Warning Threshold'),
+			    '#default_value' => variable_get('govdelivery_nagios_warning_threshold', 1000),
+			    '#description'   => t('Issue a warning alert when GovDelivery has this number of messages queued. (Make this less then the critical alert number)'),
+			),	
+	  ),
+  );
+  return $form;
+}
