@@ -1,5 +1,10 @@
 <?php
-// $Id$ 
+// $Id$
+
+/**
+ * @file
+ * ODM Services for the GovDelivery Integration module.
+ */
 
 class ODMMessage {
   public $body; // string
@@ -53,13 +58,13 @@ class odmService extends SoapClient {
   public $server_uri;
 
   private static $classmap = array(
-                                    'ODMMessage' => 'ODMMessage',
-                                    'ReportingResponse' => 'ReportingResponse',
-                                   );
+    'ODMMessage' => 'ODMMessage',
+    'ReportingResponse' => 'ReportingResponse',
+  );
 
   public function odmService($wsdl, $options = array()) {
-    foreach(self::$classmap as $key => $value) {
-      if(!isset($options['classmap'][$key])) {
+    foreach (self::$classmap as $key => $value) {
+      if (!isset($options['classmap'][$key])) {
         $options['classmap'][$key] = $value;
       }
     }
@@ -76,23 +81,23 @@ class odmService extends SoapClient {
     try {
       $time_before = (timer_read('page') / 1000);
       watchdog("govdelivery", "About to call __soapCall - page timer: !timer", array('!timer' => $time_before ), WATCHDOG_NOTICE);
-      $result = $this->__soapCall('sendMessage', array($in0),       array(
-              'uri' => $this->server_uri,
-            'soapaction' => ''
-           )
-           ); 
+      $result = $this->__soapCall('sendMessage', array($in0), array(
+          'uri' => $this->server_uri,
+          'soapaction' => ''
+        )
+      );
       $result_str = var_export($result, TRUE);
-      $time_after = (timer_read('page') / 1000);           
-      watchdog("govdelivery", "Return from call to __soapCall - result: !result, page timer: !timer, elapsed time: !elapsed", array('!result' => $result_str, '!timer' => $time_after, '!elapsed' => $time_after - $time_before ), WATCHDOG_NOTICE);
+      $time_after = (timer_read('page') / 1000);
+      watchdog("govdelivery", "Return from call to __soapCall - result: @result, page timer: @timer, elapsed time: @elapsed", array('@result' => $result_str, '@timer' => $time_after, '@elapsed' => $time_after - $time_before ), WATCHDOG_NOTICE);
       return $result;
-     } catch (Exception $e) {
+    } catch (Exception $e) {
         watchdog("govdelivery", "Exception when calling GovDelivery SOAP Service: " . $e->getMessage());
         $result_str = var_export($result, TRUE);
-        watchdog("govdelivery", "Exception in __soapCall - result: !result, page timer: !timer, elapsed time: !elapsed", array('!result' => $result_str, '!timer' => $time_after, '!elapsed' => $time_after - $time_before ), WATCHDOG_NOTICE);
+        watchdog("govdelivery", "Exception in __soapCall - result: @result, page timer: @timer, elapsed time: @elapsed", array('@result' => $result_str, '@timer' => $time_after, '@elapsed' => $time_after - $time_before ), WATCHDOG_NOTICE);
         $ret = array();
         $ret[0] = 1;
         return $ret;
-     }
+    }
   }
 
   /**
@@ -102,13 +107,11 @@ class odmService extends SoapClient {
    * @return ReportingResponse
    */
   public function messageReport($in0) {
-    return $this->__soapCall('messageReport', array($in0),       array(
-            'uri' => $this->server_uri,
-            'soapaction' => ''
-           )
-      );
+    return $this->__soapCall('messageReport', array($in0), array(
+        'uri' => $this->server_uri,
+        'soapaction' => ''
+      )
+    );
   }
 
 }
-
-?>
