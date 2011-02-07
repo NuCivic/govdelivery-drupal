@@ -1,45 +1,52 @@
 <?php
 // $Id$
+
+/**
+ * Implements hook_perm().
+ */
 function govdelivery_perm() {
   return array('Manage GovDelivery Settings');
 }
 
+/**
+ * Implements hook_menu().
+ */
 function govdelivery_menu() {
   $items['admin/settings/govdelivery'] = array(
-    'title' => t('GovDelivery Settings'),
-    'description' => t('Settings for GovDelivery to connect with the GovDelivery ODM and Subscription service.'),
+    'title' => 'GovDelivery Settings',
+    'description' => 'Settings for GovDelivery to connect with the GovDelivery ODM and Subscription service.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('govdelivery_settings'),
     'access arguments' => array('Manage GovDelivery Settings'),
     'type' => MENU_NORMAL_ITEM,
   );
-  $items['admin/settings/govdelivery_test'] = array(
-    'title' => t('GovDelivery Settings Test - Messages'),
-    'description' => t('Test sending messages through Drupal correctly route to the GovDelivery service.'),
+  $items['admin/settings/govdelivery/test'] = array(
+    'title' => 'GovDelivery Settings Test - Messages',
+    'description' => 'Test sending messages through Drupal correctly route to the GovDelivery service.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('govdelivery_test_settings'),
     'access arguments' => array('Manage GovDelivery Settings'),
-    'type' => MENU_NORMAL_ITEM,
+    'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/settings/govdelivery_test_subscriptions'] = array(
-    'title' => t('GovDelivery Settings Test - Subscriptions'),
-    'description' => t('Test signup process for GovDelivery Subscription services.'),
+  $items['admin/settings/govdelivery/test_subscriptions'] = array(
+    'title' => 'GovDelivery Settings Test - Subscriptions',
+    'description' => 'Test signup process for GovDelivery Subscription services.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('govdelivery_test_subscriptions'),
     'access arguments' => array('Manage GovDelivery Settings'),
-    'type' => MENU_NORMAL_ITEM,
+    'type' => MENU_LOCAL_TASK,
   );
   $items['admin/reports/govdelivery_message_queue'] = array(
-    'title' => t('GovDelivery Message Queue'),
-    'description' => t('View current items in the message queue.'),
+    'title' => 'GovDelivery Message Queue',
+    'description' => 'View current items in the message queue.',
     'page callback' => 'govdelivery_message_queue_report',
     'page arguments' => array(''),
     'access arguments' => array('Manage GovDelivery Settings'),
     'type' => MENU_NORMAL_ITEM,
   );
-  $items['govdelivery_details'] = array(
-    'title' => t('GovDelivery Message Details'),
-    'description' => t('Details of a queued messaged'),
+  $items['admin/reports/govdelivery_message_queue/details'] = array(
+    'title' => 'GovDelivery Message Details',
+    'description' => 'Details of a queued messaged',,
     'page callback' => 'govdelivery_details',
     'page arguments' => array(),
     'access arguments' => array('Manage GovDelivery Settings'),
@@ -498,7 +505,7 @@ function govdelivery_send_message($message) {
       $sendsuccess = !$status[0]; // 0 is successfull !0 is fail.
     }
     else {
-      $sendsucces = FALSE;
+      $sendsuccess = FALSE;
     }
   }
   else {
@@ -578,7 +585,9 @@ function govdelivery_message_queue_report() {
     $queuedmessage->data = govdelivery_queue_get($queue, $queuedmessage->cid);
     // Build the row.
     if ($queuedmessage->data != 0) {
-      $rows[] = array(l($queuedmessage->data['subject'], 'govdelivery_details/' . $queuedmessage->cid), $queuedmessage->day, check_plain($queuedmessage->data['id']));
+      $subject_text = $queuedmessage->data['subject'] ? $queuedmessage->data['subject'] : t('(no subject)');
+      $subject_link = l($subject_text, 'admin/reports/govdelivery_message_queue/details/' . $queuedmessage->cid);
+      $rows[] = array($subject_link, $queuedmessage->day, check_plain($queuedmessage->data['id']));
     }
   }// End while.
 
