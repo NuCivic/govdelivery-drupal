@@ -46,7 +46,7 @@ function govdelivery_menu() {
   );
   $items['admin/reports/govdelivery_message_queue/details'] = array(
     'title' => 'GovDelivery Message Details',
-    'description' => 'Details of a queued messaged',,
+    'description' => 'Details of a queued messaged',
     'page callback' => 'govdelivery_details',
     'page arguments' => array(),
     'access arguments' => array('Manage GovDelivery Settings'),
