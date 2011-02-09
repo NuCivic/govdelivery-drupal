@@ -33,8 +33,9 @@ function govdelivery_drush_command() {
     // a short description of your command
     'description' => "Send the messages in the govdelivery queue",
     'arguments' => array(
-      'messages' => 'The number of messages to send in this run.  If the argument is not provided all messages will be sent.',
+      'type' => 'The type of the queue that should be sent.',
     ),
+    'aliases' => array('govds'),
   );
 
   // the key in the $items array is the name of the command.
@@ -53,7 +54,7 @@ function govdelivery_drush_command() {
     // the name of the function implementing your command.
     'callback' => 'govdelivery_drush_subscribe',
     // a short description of your command
-    'description' => "Send a test message using the GovDelivery service test functionality.",
+    'description' => "Sends subscriptions from the subscription queue.",
     'arguments' => array(
       'code' => 'List code for subscription',
       'addresses' => 'Email to subscribe',
@@ -78,7 +79,7 @@ function govdelivery_drush_command() {
 function govdelivery_drush_help($section) {
   switch ($section) {
     case 'drush:govdelivery send':
-      return dt("Sends messages from the govdelivery queue.");
+      return dt("Sends messages from the govdelivery message queue, either messages or subscribers queue.");
     case 'drush:govdelivery test':
       return dt("Sends a test message using govdelivery (this will be queued and sent on the next queue process)");
     case 'drush:govdelivery subscribe':
@@ -86,14 +87,28 @@ function govdelivery_drush_help($section) {
   }
 }
 
+function drush_govdelievery_queue_types() {
+  $types = array(
+    'messages' => array('govdelivery_message_queue', 'govdelivery_send_message'),
+    'subscribers' => array('govdelivery_subscription_queue', 'govdelivery_queued_subscribe'),
+  );
+  return $types;
+}
 /**
  * Send messages from the govdelivery queue.
  *
  * @param
  *   The number of messages to send from the queue.
  */
-function drush_govdelivery_send_queued_messages($messages = NULL) {
-  $messages_sent = govdelivery_process_queue($messages, TRUE);
+function drush_govdelivery_send_queued_messages($type = NULL) {
+  $types = drush_govdelievery_queue_types();
+  if ($type) {
+    $messages_sent = govdelivery_process_queue($types[$type]['0'], $types[$type]['1']);
+  }
+  else {  
+    $choice = drush_choice($types, 'Which queue would you like to process', '!key');
+    $messages_sent = govdelivery_process_queue($types[$choice]['0'], $types[$choice]['1']);
+  }
   if ( ( $messages_sent ) || ( $messages_sent === 0 ) ) {
     drush_log("Message queue has been processed, " . $messages_sent . " messages sent.", 'completed');
   }
