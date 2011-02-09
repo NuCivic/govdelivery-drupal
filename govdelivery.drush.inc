@@ -105,7 +105,7 @@ function drush_govdelivery_send_queued_messages($type = NULL) {
   if ($type) {
     $messages_sent = govdelivery_process_queue($types[$type]['0'], $types[$type]['1']);
   }
-  else {  
+  else {
     $choice = drush_choice($types, 'Which queue would you like to process', '!key');
     $messages_sent = govdelivery_process_queue($types[$choice]['0'], $types[$choice]['1']);
   }
