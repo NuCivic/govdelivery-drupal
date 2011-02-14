@@ -18,6 +18,7 @@ function govdelivery_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('govdelivery_settings'),
     'access arguments' => array('Manage GovDelivery Settings'),
+    'file' => 'govdelivery.admin.inc',
     'type' => MENU_NORMAL_ITEM,
   );
   $items['admin/settings/govdelivery/test'] = array(
@@ -26,6 +27,7 @@ function govdelivery_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('govdelivery_test_settings'),
     'access arguments' => array('Manage GovDelivery Settings'),
+    'file' => 'govdelivery.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
   $items['admin/settings/govdelivery/test_subscriptions'] = array(
@@ -34,14 +36,16 @@ function govdelivery_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('govdelivery_test_subscriptions'),
     'access arguments' => array('Manage GovDelivery Settings'),
+    'file' => 'govdelivery.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
   $items['admin/reports/govdelivery_message_queue'] = array(
     'title' => 'GovDelivery Message Queue',
     'description' => 'View current items in the message queue.',
     'page callback' => 'govdelivery_message_queue_report',
-    'page arguments' => array(''),
+    'page arguments' => array(),
     'access arguments' => array('Manage GovDelivery Settings'),
+    'file' => 'govdelivery.admin-reports.inc',
     'type' => MENU_NORMAL_ITEM,
   );
   $items['admin/reports/govdelivery_message_queue/details'] = array(
@@ -50,224 +54,12 @@ function govdelivery_menu() {
     'page callback' => 'govdelivery_details',
     'page arguments' => array(),
     'access arguments' => array('Manage GovDelivery Settings'),
+    'file' => 'govdelivery.admin-reports.inc',
     'type' => MENU_CALLBACK,
   );
 
   return $items;
 }
-
-
-function govdelivery_settings() {
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
-  $govdelivery_subscription_settings = variable_get('govdelivery_subscription_settings', array());
-
-  $account_fieldset = array(
-    '#type' => 'fieldset',
-    '#title' => t('Mail Accounts'),
-  );
-
-  if (isset($govdelivery_odm_settings) && isset($govdelivery_odm_settings['accounts']) && is_array($govdelivery_odm_settings['accounts'])) {
-    foreach ($govdelivery_odm_settings['accounts'] as $username => $account_settings) {
-      $account_fieldset[$username . '%###%'  . 'fromname'] = array(
-          '#type' => "textfield",
-          '#title' => t('From Name'),
-          '#default_value' => $account_settings['fromname'],
-        );
-      $account_fieldset[$username . '%###%' . 'username'] = array(
-          '#type' => "textfield",
-          '#title' => t('Username'),
-          '#default_value' => $username,
-        );
-      $account_fieldset[$username . '%###%' . 'password'] = array(
-        '#type' => "textfield",
-        '#title' => t('Password'),
-        '#default_value' => $account_settings['password'],
-      );
-    }
-  }
-
-  $account_fieldset['fromname'] = array(
-    '#type' => "textfield",
-    '#title' => t('From Name'),
-  );
-  $account_fieldset['username'] = array(
-    '#type' => "textfield",
-    '#title' => t('Username'),
-  );
-  $account_fieldset['password'] = array(
-    '#type' => "textfield",
-    '#title' => t('Password'),
-  );
-
-  $subscription_fieldset = array(
-    '#type' => 'fieldset',
-    '#title' => t('Subscription API'),
-  );
-
-  $subscription_fieldset['subscription_service_url'] = array(
-    '#type' => "textfield",
-    '#title' => t('URL for Subscription Service'),
-    '#default_value' => $govdelivery_subscription_settings['service_url'],
-  );
-
-  $form=array(
-    'govdelivery_odm_settings' => array(
-      '#type' => 'fieldset',
-      '#title' => t('Mail Server Settings'),
-      '#tree' => TRUE,
-      'accounts' => $account_fieldset,
-      'server' => array(
-        '#type' => "textfield",
-        '#title' => 'server',
-        '#default_value' => $govdelivery_odm_settings['server'],
-      ),
-      'enabled' => array(
-        '#type' => 'radios',
-        '#default_value' => $govdelivery_odm_settings['enabled'],
-        '#title' => t('Outbound mail rerouting'),
-        '#options' => array('Disabled', 'Enabled'),
-      ),
-      'queue' => array(
-        '#type' => 'radios',
-        '#default_value' => $govdelivery_odm_settings['queue'],
-        '#title' => t('Queue Messages (Messages that fail to send are queued regardless of this setting)'),
-        '#options' => array('Disabled', 'Enabled'),
-      ),
-    ),
-    'govdelivery_subscription_settings' => $subscription_fieldset,
-
-    'save' => array('#type' => 'submit', '#value' => 'Save Configuration'),
-  );
-  return $form;
-//  return system_settings_form($form);
-}
-
-function govdelivery_settings_submit($form, $postinfo) {
-  // change around the account storage to an associative array indexed by username
-  $govdelivery_odm_settings = $postinfo['values']['govdelivery_odm_settings'];
-  $new_account = array();
-  $account_settings = array();
-
-  foreach ($govdelivery_odm_settings['accounts'] as $composite_key => $value) {
-    // if we don't have a value we don't want to do anything
-    if (isset($value) && !empty($value)) {
-      $key_elements = explode('%###%', $composite_key);
-      if (count($key_elements) == 2) {
-        $username = $key_elements[0];
-        $field = $key_elements[1];
-
-        if (!isset($account_settings[$username]) && isset($username) && !empty($username)) {
-          $account_settings[$username] = array();
-        }
-        if ($field != 'username') {
-          $account_settings[$username][$field] = $value;
-        }
-      }
-      else {
-        if (isset($key_elements[0])) {
-          $new_account[$key_elements[0]] = $value;
-        }
-      }
-    }
-  }
-
-  if (isset($new_account['username'])) {
-    $account_settings[$new_account['username']] = array(
-      "password" => $new_account['password'],
-      "fromname" => $new_account['fromname'],
-    );
-  }
-
-  $govdelivery_odm_settings['accounts'] = $account_settings;
-
-  variable_set('govdelivery_odm_settings', $govdelivery_odm_settings);
-  $govdelivery_subscription_settings = array();
-  $govdelivery_subscription_settings['service_url'] = $postinfo['values']['subscription_service_url'];
-  variable_set('govdelivery_subscription_settings', $govdelivery_subscription_settings);
-
-  if ($postinfo['values']['govdelivery_odm_settings']['enabled'] == 1) {
-    $path = drupal_get_path('module', 'govdelivery');
-    variable_set('smtp_library', $path . "/govdelivery_library.inc");
-  }
-  else{
-    variable_del('smtp_library');
-  }
-}
-
-// Send a test message to the specificed addresses.
-function govdelivery_test_settings() {
-  $form = array(
-    'govdelivery_test_settings' => array(
-      '#type' => 'fieldset',
-      '#title' => t('GovDelivery Test Settings'),
-      '#tree' => TRUE,
-      'recipients' => array(
-        '#type' => 'textfield',
-        '#title' => t('Recipient\'s Email (Comma seperated)'),
-      ),
-      'test' => array(
-      '#type' => 'submit',
-      '#value' => t('Send test message'),
-      ),
-    ),
-  );
-
-  return $form;
-}
-
-function govdelivery_test_settings_submit($form, $postinfo) {
-  $recipients = $postinfo['values']['govdelivery_test_settings']['recipients'];
-  // Save settings and Send message.
-  if (isset($recipients) && !empty($recipients)) {
-    // Pass on the list to be sent.
-    $status = govdelivery_send_test_message($recipients);
-  }
-  drupal_set_message(t('Your test message has been sent.'));
-}
-
-function govdelivery_send_test_message($send_to) {
-  return drupal_mail('govdelivery', 'test_id', $send_to, array(), NULL, TRUE);
-}
-
-// Signup an email address for a specified list and pass any known questions and answers along.
-function govdelivery_test_subscriptions() {
-  $form = array(
-    'govdelivery_test_subscriptions' => array(
-      '#type' => 'fieldset',
-      '#title' => t('GovDelivery Settings Test - Subscriptions'),
-      '#tree' => TRUE,
-      'subscriber' => array(
-        '#type' => 'textfield',
-        '#title' => t('Subscriber\'s Email'),
-      ),
-      'list_code' => array(
-        '#type' => 'textfield',
-        '#title' => t('Subscription List Code'),
-      ),
-      // Use Queue option
-      'test' => array(
-      '#type' => 'submit',
-      '#value' => t('Test send message'),
-      ),
-    ),
-  );
-
-  return $form;
-}
-
-// Need validation that there is only one subscriber or change to handle multiple subscriptions.
-
-function govdelivery_test_subscriptions_submit($form, $postinfo) {
-  $subscriber = $postinfo['values']['govdelivery_test_subscriptions']['subscriber'];
-  $list_code = $postinfo['values']['govdelivery_test_subscriptions']['list_code'];
-
-  if (isset($subscriber) && !empty($subscriber) && isset($list_code) && !empty($list_code)) {
-    $status = govdelivery_subscribe($list_code, $subscriber, FALSE);
-  }
-
-  drupal_set_message(t('%response', array('%response' => $status ? 'Subscription Added.' : 'Subscription Failed.')));
-}
-
 
 function govdelivery_mail($key, &$message, $params) {
   $message['subject'] = 'GovDelivery test message';
@@ -537,7 +329,6 @@ function govdelivery_filter_email($address) {
   return $matches[0];
 }
 
-
 // Send messages immediately or to the queue if enabled.
 function govdelivery_process_message($key, $message) {
   // Check preferences
@@ -562,113 +353,6 @@ function govdelivery_process_message($key, $message) {
   }
 }// End govdelivery_send.
 
-// Report of the GovDelivery Queues status.
-// Subject lines are links to a details page.
-function govdelivery_message_queue_report() {
-  $queue = 'govdelivery_message_queue';
-  // Setup table fields mapping to the data.
-  $header = array(
-    array('data' => 'Subject'),
-    array('data' => 'Created', 'field' => 'day', 'sort' => 'DESC'),
-    array('data' => 'Form'),
-  );
-
-  // Query the database for the data.
-  $dataquery = "SELECT FROM_DAYS(TO_DAYS(FROM_UNIXTIME(created))) day, cid FROM {". $queue ."} GROUP BY day, cid " . tablesort_sql($header);
-  $countquery = "SELECT COUNT(*) FROM {". $queue ."}";
-  $result = pager_query($dataquery, 30, 0, $countquery);
-
-  // Assign data to rows.
-  $rows = array();
-  while ($queuedmessage = db_fetch_object($result)) {
-    // Get the message unserialized.
-    $queuedmessage->data = govdelivery_queue_get($queue, $queuedmessage->cid);
-    // Build the row.
-    if ($queuedmessage->data != 0) {
-      $subject_text = $queuedmessage->data['subject'] ? $queuedmessage->data['subject'] : t('(no subject)');
-      $subject_link = l($subject_text, 'admin/reports/govdelivery_message_queue/details/' . $queuedmessage->cid);
-      $rows[] = array($subject_link, $queuedmessage->day, check_plain($queuedmessage->data['id']));
-    }
-  }// End while.
-
-  // Empty dataset message.
-  if (empty($rows)) {
-    $rows[] = array(array('data' => t('No messages currently in the queue.'), 'colspan' => 3));
-  }
-
-  $output  = theme('table', $header, $rows);
-  $output .= theme('pager', NULL, 30, 0);
-
-  return $output;
-}// End govdelivery_message_queue_status.
-
-
-// View a single message in the queue.
-function govdelivery_details($cid) {
-  $queue = 'govdelivery_message_queue';
-  // Build a table to display the message details.
-  if (!empty($cid)) {
-    // Get the message unserialized.
-    $queuedmessage = govdelivery_queue_get($queue, $cid);
-    if ($queuedmessage != 0) {
-      // Setup table fields mapping to the data.
-      $header = array(
-        array('data' => t('Field')),
-        array('data' => t('Value')),
-      );
-      // Setup the rows.
-      $rows = array(
-        array('CID', check_plain($cid) ),
-        array('ID', check_plain($queuedmessage['id']) ),
-        array('To', check_plain($queuedmessage['to']) ),
-        array('Errors-To', check_plain($queuedmessage['headers']['Errors-To']) ),
-        array('Return-Path', check_plain($queuedmessage['headers']['Return-Path']) ),
-        array('Sender', check_plain($queuedmessage['headers']['Sender']) ),
-        array('Language', (empty($queuedmessage['language']) ? '' : implode(',', $queuedmessage['language'])) ),
-        array('Parameters', check_plain($queuedmessage['params']) ),
-        array('Subject', check_plain($queuedmessage['subject']) ),
-        array('Body', check_plain($queuedmessage['body']) ),
-      );
-    }
-  }
-
-  // Empty dataset message.
-  // If the data set is empty dont load the form.
-  if (empty($rows)) {
-    $rows[] = array(array('data' => t('Message no longer in the queue.'), 'colspan' => 2));
-  }
-  else {
-    $output .= drupal_get_form('govdelivery_details_form', $cid);
-  }
-  $output .= theme('table', $header, $rows);
-
-  return $output;
-}
-
-// A form to send a message immediately.
-function govdelivery_details_form($form, $cid) {
-  $form = array(
-    'govdelivery_details' => array(
-      '#type' => 'fieldset',
-      '#title' => t('Message Actions'),
-      '#tree' => TRUE,
-      '#collapsible' => TRUE,
-      'cid' => array('#type' => 'value', '#value' => $cid),
-      'send' => array('#type' => 'submit', '#value' => t('Send Now')),
-    ),
-  );
-  return $form;
-}
-
-function govdelivery_details_form_submit($form, &$postinfo) {
-  $cid = $postinfo['values']['govdelivery_details']['cid'];
-  // Send the message from the queue immediately.
-  if (!empty($cid)) {
-    $sent = govdelivery_process_message_queue(NULL, FALSE, $cid);
-    drupal_set_message(t('Messages sent from the queue: @sent', array('@sent' => $sent)));
-  }
-  $postinfo['redirect'] = 'admin/reports/govdelivery_message_queue';
-}
 
 // Implement nagios_info hook to allow enabling/disabling our nagios notifications.
 function govdelivery_nagios_info() {
