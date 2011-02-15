@@ -51,7 +51,7 @@ function govdelivery_settings() {
   $subscription_fieldset['subscription_service_url'] = array(
     '#type' => "textfield",
     '#title' => t('URL for Subscription Service'),
-    '#default_value' => $govdelivery_subscription_settings['service_url'],
+    '#default_value' => url($govdelivery_subscription_settings['service_url']),
   );
 
   $form=array(
