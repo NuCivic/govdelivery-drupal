@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 function govdelivery_settings() {
   $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());

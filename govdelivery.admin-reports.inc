@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 // Report of the GovDelivery Queues status.
 // Subject lines are links to a details page.

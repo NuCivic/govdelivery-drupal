@@ -1,4 +1,3 @@
-; $Id$ 
 name = GovDelivery
 description = Integrates drupal mail with a different outbound mail system (non smtp)
 package = Administration
