@@ -87,7 +87,7 @@ function govdelivery_queued_subscribe($item) {
 // Subscribe a user to a list via webservice
 function govdelivery_subscribe($list_code, $email, $from_queue = FALSE) {
   // Check the initial prototype input.
-  if (is_null($list_code) || empty($list_code) {
+  if (is_null($list_code) || empty($list_code)) {
     watchdog('govdelivery', 'Supplied list code is null or empty.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
@@ -119,7 +119,7 @@ function govdelivery_subscribe($list_code, $email, $from_queue = FALSE) {
       }
       else { 
         // Settings are valid now send the request.
-        $request_url = url($service_url, array('query' => $request);
+        $request_url = url($service_url, array('query' => $request));
         $response = drupal_http_request($request_url);
 
         // The response is well-formed XML, but seems pretty heavyweight to parse as XML,
