@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @TODO Switch these reports to be views and enable VBO to manage the queue.
+ */
+
 // Report of the GovDelivery Queues status.
 // Subject lines are links to a details page.
 function govdelivery_message_queue_report() {

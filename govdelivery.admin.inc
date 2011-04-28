@@ -138,11 +138,11 @@ function govdelivery_settings_submit($form, $postinfo) {
 }
 
 // Send a test message to the specificed addresses.
-function govdelivery_test_settings() {
+function govdelivery_test_message() {
   $form = array(
-    'govdelivery_test_settings' => array(
+    'govdelivery_test_message' => array(
       '#type' => 'fieldset',
-      '#title' => t('GovDelivery Test Settings'),
+      '#title' => t('GovDelivery Test Message'),
       '#tree' => TRUE,
       'recipients' => array(
         '#type' => 'textfield',
@@ -158,7 +158,7 @@ function govdelivery_test_settings() {
   return $form;
 }
 
-function govdelivery_test_settings_submit($form, $postinfo) {
+function govdelivery_test_message_submit($form, $postinfo) {
   $recipients = $postinfo['values']['govdelivery_test_settings']['recipients'];
   // Save settings and Send message.
   if (isset($recipients) && !empty($recipients)) {
@@ -170,6 +170,22 @@ function govdelivery_test_settings_submit($form, $postinfo) {
 
 function govdelivery_send_test_message($send_to) {
   return drupal_mail('govdelivery', 'test_id', $send_to, array(), NULL, TRUE);
+}
+
+/**
+ *  Implementation of hook_mail
+ *
+ *  @TODO Move to the admin code file.
+ */
+function govdelivery_mail($key, &$message, $params) {
+  $message['subject'] = 'GovDelivery test message';
+  if (isset($_SERVER['HTTP_HOST'])) {
+    $_SERVER['HTTP_HOST'] = strtolower($_SERVER['HTTP_HOST']);
+    if (drupal_valid_http_host($_SERVER['HTTP_HOST'])) {
+      $message['subject'] = 'GovDelivery test message: ' . $_SERVER['HTTP_HOST'];
+    }
+  }
+  $message['body'] = "This is a test message from the GovDelivery system";
 }
 
 // Signup an email address for a specified list and pass any known questions and answers along.
