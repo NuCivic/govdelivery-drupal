@@ -78,6 +78,7 @@ function govdelivery_mail($key, &$message, $params) {
 
 function govdelivery_cron() {
   $messages_sent = govdelivery_process_message_queue();
+  $items_sent = govdelivery_process_subscription_queue();
 }
 
 // Helper function when calling subscribe from the queue run
