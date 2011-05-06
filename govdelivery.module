@@ -141,18 +141,30 @@ function govdelivery_subscribe($list_code, $email, $from_queue = FALSE) {
   $result_code = $matches[1];
   $message = $matches[2];
 
-  // Check if the request was successful or queue if needed.
-  if ($result_code == "200") {
-    watchdog('govdelivery', 'Subscribed %email to list %list', array('%email' => $request['email'], '%list' => $request['code']), WATCHDOG_INFO);
-    return TRUE;
-  }
-  else {
-    if (!$from_queue) {
-      govdelivery_queue_set('govdelivery_subscription_queue', $key, $request);
-    }
-    watchdog('govdelivery', 'Error subscribing %email to list %list. Response %response:  %message; message will be queued',
-      array( '%email' => $request['email'], '%list' => $request['code'], '%response' => $result_code, '%message' => $message), WATCHDOG_ERROR);
-    return FALSE;
+  switch($result_code) {
+    case "200":
+      watchdog('govdelivery', 'Subscribed Email: %email to List: %list', array('%email' => $request['email'], '%list' => $request['code']), WATCHDOG_INFO);
+      return TRUE;
+      break;
+    case "404":
+    case "500":
+      watchdog('govdelivery', 'Error subscribing - Email:  %email List: %list Response: %response Message: %message; Item will not be queued.',
+        array( '%email' => $request['email'], '%list' => $request['code'], '%response' => $result_code, '%message' => $message), WATCHDOG_ERROR);
+      // Return TRUE to remove something from the queue
+      if ($from_queue) {
+        return TRUE;
+      }
+      return FALSE;
+      break;
+    default:
+      if (!$from_queue) {
+        govdelivery_queue_set('govdelivery_subscription_queue', $key, $request);
+      }
+      watchdog('govdelivery', 'Error subscribing - Email:  %email List: %list Response: %response Message: %message; Item will be queued.',
+        array( '%email' => $request['email'], '%list' => $request['code'], '%response' => $result_code, '%message' => $message), WATCHDOG_ERROR);
+      return FALSE;
+      break;
+
   }
 }
 
