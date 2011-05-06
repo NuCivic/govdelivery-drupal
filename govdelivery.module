@@ -148,7 +148,7 @@ function govdelivery_subscribe($list_code, $email, $from_queue = FALSE) {
       break;
     case "404":
     case "500":
-      watchdog('govdelivery', 'Error subscribing - Email:  %email List: %list Response: %response Message: %message; Item will not be queued.',
+      watchdog('govdelivery', 'Error subscribing - Email: %email List: %list Response: %response Message: %message; Item will not be queued.',
         array( '%email' => $request['email'], '%list' => $request['code'], '%response' => $result_code, '%message' => $message), WATCHDOG_ERROR);
       // Return TRUE to remove something from the queue
       if ($from_queue) {

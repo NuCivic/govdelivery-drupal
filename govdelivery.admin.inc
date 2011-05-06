@@ -204,9 +204,9 @@ function govdelivery_test_subscriptions_submit($form, $postinfo) {
   $subscriber = $postinfo['values']['govdelivery_test_subscriptions']['subscriber'];
   $list_code = $postinfo['values']['govdelivery_test_subscriptions']['list_code'];
 
-  if (isset($subscriber) && !empty($subscriber) && isset($list_code) && !empty($list_code)) {
+  //if (isset($subscriber) && !empty($subscriber) && isset($list_code) && !empty($list_code)) {
     $status = govdelivery_subscribe($list_code, $subscriber, FALSE);
-  }
+  //}
 
   drupal_set_message(t('%response', array('%response' => $status ? 'Subscription Added.' : 'Subscription Failed.')));
 }
