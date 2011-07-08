@@ -77,8 +77,18 @@ function govdelivery_mail($key, &$message, $params) {
 }
 
 function govdelivery_cron() {
-  $messages_sent = govdelivery_process_message_queue();
-  $items_sent = govdelivery_process_subscription_queue();
+  $govdelivery_subscription_settings = variable_get('govdelivery_subscription_settings', NULL);
+  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+
+  // If subscriptions cron is Enabled
+  if(isset($govdelivery_subscription_settings['cron_subscriptions']) && $govdelivery_subscription_settings['cron_subscriptions']) {
+    $messages_sent = govdelivery_process_subscription_queue();
+  }
+
+  // If subscriptions cron is Enabled
+  if(isset($govdelivery_odm_settings['cron_odm']) && $govdelivery_odm_settings['cron_odm']) {
+    $items_sent = govdelivery_process_message_queue();
+  }
 }
 
 // Helper function when calling subscribe from the queue run
@@ -137,16 +147,32 @@ function govdelivery_subscribe($list_code, $email, $from_queue = FALSE) {
   // The response is well-formed XML, but seems pretty heavyweight to parse as XML,
   // we're better off with a simple regex match
   $matches = array();
-  preg_match("/<response code='(\d+)' message='(.*)'><\/response>/", $response->data, $matches);
+  preg_match("/<response code='(\d+)' message=[',\"](.*)[',\"]><\/response>/", $response->data, $matches);
   $result_code = $matches[1];
   $message = $matches[2];
 
+  // If the response code in the response header from govdelivery is anything other then 200 
+  // there is something seriously wrong with this request and we should consider it malicious.
+  // It also doesn't help that GovDelivery isn't sending back a standard response like the 
+  // other error codes.
+  if ($response->code != '200') {
+    watchdog('govdelivery', 'Error subscribing - Email: %email List: %list The response from GovDelivery was not 200 meaning this request is probably malicious. This subscription will not be queued.',
+      array( '%email' => $request['email'], '%list' => $request['code'],), WATCHDOG_ERROR);
+    // Return TRUE to remove something from the queue
+    if ($from_queue) {
+      return TRUE;
+    }
+    return FALSE;
+  }
+
+  // In the future we should be able to switch this to key off of $response->code but until then we need to keep parsing.
   switch($result_code) {
     case "200":
       watchdog('govdelivery', 'Subscribed Email: %email to List: %list', array('%email' => $request['email'], '%list' => $request['code']), WATCHDOG_INFO);
       return TRUE;
       break;
     case "404":
+    case "414":
     case "500":
       watchdog('govdelivery', 'Error subscribing - Email: %email List: %list Response: %response Message: %message; Item will not be queued.',
         array( '%email' => $request['email'], '%list' => $request['code'], '%response' => $result_code, '%message' => $message), WATCHDOG_ERROR);
@@ -254,7 +280,7 @@ function govdelivery_queue_get($queue, $cid) {
     // always return the cached data.
     $message->data = db_decode_blob($message->data);
     if ($message->serialized) {
-        $message->data = unserialize($message->data);
+      $message->data = unserialize($message->data);
     }
     return $message->data;
   }
@@ -290,6 +316,13 @@ function govdelivery_send_message($message) {
 
     $ODMmessage = new ODMMessage();
 
+    // Basically this is saying that a to list can be either an array 
+    // or a comma seperated values list. 
+    // If it is an array each array item may still be a command seperated list
+    // So we need to parse the comma seperated list of each array element. 
+    // If it is not initially an array then we need to check for a comma seperated list 
+    // only once and then proceede.
+    // Its really weird but its possible.
     $recipients = array();
     if (is_array($message["to"])) {
       foreach ($message["to"] as $address) {
@@ -304,7 +337,14 @@ function govdelivery_send_message($message) {
       }
     }
     else {
-      $recipients = explode(',', $message["to"]);
+      $tolist = explode(',', $message["to"]);
+      if (is_array($tolist)) {
+        $filtered_list = array_map("govdelivery_filter_email", $tolist);
+        $recipients = array_merge($recipients , $filtered_list);
+      }
+      else {
+        $recipients[] = govdelivery_filter_email($tolist);
+      }
     }
 
     $ODMmessage->to = (array)$recipients;

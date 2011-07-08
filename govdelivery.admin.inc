@@ -45,13 +45,22 @@ function govdelivery_settings() {
   $subscription_fieldset = array(
     '#type' => 'fieldset',
     '#title' => t('Subscription API'),
+    '#tree' => TRUE,
   );
 
-  $subscription_fieldset['subscription_service_url'] = array(
+  $subscription_fieldset['service_url'] = array(
     '#type' => "textfield",
     '#title' => t('URL for Subscription Service'),
     '#default_value' => url($govdelivery_subscription_settings['service_url']),
   );
+
+  $subscription_fieldset['cron_subscriptions'] = array(
+    '#type' => 'radios',
+    '#default_value' => $govdelivery_subscription_settings['cron_subscriptions'],
+    '#title' => t('Subscriptions Cron (Will automatically resend the subscriptions queue on cron runs)'),
+    '#options' => array('Disabled', 'Enabled'),
+  );
+
 
   $form=array(
     'govdelivery_odm_settings' => array(
@@ -76,9 +85,14 @@ function govdelivery_settings() {
         '#title' => t('Queue Messages (Messages that fail to send are queued regardless of this setting)'),
         '#options' => array('Disabled', 'Enabled'),
       ),
+      'cron_odm' => array(
+        '#type' => 'radios',
+        '#default_value' => $govdelivery_odm_settings['cron_odm'],
+        '#title' => t('Messages Cron (Will automatically resend the messages queue on cron runs)'),
+        '#options' => array('Disabled', 'Enabled'),
+      ),
     ),
     'govdelivery_subscription_settings' => $subscription_fieldset,
-
     'save' => array('#type' => 'submit', '#value' => 'Save Configuration'),
   );
   return $form;
@@ -88,6 +102,7 @@ function govdelivery_settings() {
 function govdelivery_settings_submit($form, $postinfo) {
   // change around the account storage to an associative array indexed by username
   $govdelivery_odm_settings = $postinfo['values']['govdelivery_odm_settings'];
+  $govdelivery_subscription_settings = $postinfo['values']['govdelivery_subscription_settings'];
   $new_account = array();
   $account_settings = array();
 
@@ -124,8 +139,6 @@ function govdelivery_settings_submit($form, $postinfo) {
   $govdelivery_odm_settings['accounts'] = $account_settings;
 
   variable_set('govdelivery_odm_settings', $govdelivery_odm_settings);
-  $govdelivery_subscription_settings = array();
-  $govdelivery_subscription_settings['service_url'] = $postinfo['values']['subscription_service_url'];
   variable_set('govdelivery_subscription_settings', $govdelivery_subscription_settings);
 
   if ($postinfo['values']['govdelivery_odm_settings']['enabled'] == 1) {
