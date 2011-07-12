@@ -2,5 +2,6 @@ name = GovDelivery
 description = Integrates drupal mail with a different outbound mail system (non smtp)
 package = Administration
 project = "Other"
-core = 6.x
+core = 7.x
 
+files[] = odmService.php

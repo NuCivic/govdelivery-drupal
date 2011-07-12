@@ -1,6 +1,10 @@
 <?php
 
-function govdelivery_settings() {
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function govdelivery_settings($form, &$form_state) {
   $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
   $govdelivery_subscription_settings = variable_get('govdelivery_subscription_settings', array());
 
@@ -12,15 +16,15 @@ function govdelivery_settings() {
   if (isset($govdelivery_odm_settings) && isset($govdelivery_odm_settings['accounts']) && is_array($govdelivery_odm_settings['accounts'])) {
     foreach ($govdelivery_odm_settings['accounts'] as $username => $account_settings) {
       $account_fieldset[$username . '%###%'  . 'fromname'] = array(
-          '#type' => "textfield",
-          '#title' => t('From Name'),
-          '#default_value' => $account_settings['fromname'],
-        );
+        '#type' => "textfield",
+        '#title' => t('From Name'),
+        '#default_value' => $account_settings['fromname'],
+      );
       $account_fieldset[$username . '%###%' . 'username'] = array(
-          '#type' => "textfield",
-          '#title' => t('Username'),
-          '#default_value' => $username,
-        );
+        '#type' => "textfield",
+        '#title' => t('Username'),
+        '#default_value' => $username,
+      );
       $account_fieldset[$username . '%###%' . 'password'] = array(
         '#type' => "textfield",
         '#title' => t('Password'),
@@ -62,7 +66,7 @@ function govdelivery_settings() {
   );
 
 
-  $form=array(
+  $form = array(
     'govdelivery_odm_settings' => array(
       '#type' => 'fieldset',
       '#title' => t('Mail Server Settings'),
@@ -93,12 +97,19 @@ function govdelivery_settings() {
       ),
     ),
     'govdelivery_subscription_settings' => $subscription_fieldset,
-    'save' => array('#type' => 'submit', '#value' => 'Save Configuration'),
+    'save' => array(
+      '#type' => 'submit',
+      '#value' => 'Save Configuration',
+    ),
   );
   return $form;
 //  return system_settings_form($form);
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_settings_submit($form, $postinfo) {
   // change around the account storage to an associative array indexed by username
   $govdelivery_odm_settings = $postinfo['values']['govdelivery_odm_settings'];
@@ -145,13 +156,17 @@ function govdelivery_settings_submit($form, $postinfo) {
     $path = drupal_get_path('module', 'govdelivery');
     variable_set('smtp_library', $path . "/govdelivery_library.inc");
   }
-  else{
+  else {
     variable_del('smtp_library');
   }
 }
 
 // Send a test message to the specificed addresses.
-function govdelivery_test_settings() {
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function govdelivery_test_settings($form, &$form_state) {
   $form = array(
     'govdelivery_test_settings' => array(
       '#type' => 'fieldset',
@@ -162,8 +177,8 @@ function govdelivery_test_settings() {
         '#title' => t('Recipient\'s Email (Comma seperated)'),
       ),
       'test' => array(
-      '#type' => 'submit',
-      '#value' => t('Send test message'),
+        '#type' => 'submit',
+        '#value' => t('Send test message'),
       ),
     ),
   );
@@ -171,6 +186,10 @@ function govdelivery_test_settings() {
   return $form;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_test_settings_submit($form, $postinfo) {
   $recipients = $postinfo['values']['govdelivery_test_settings']['recipients'];
   // Save settings and Send message.
@@ -181,12 +200,20 @@ function govdelivery_test_settings_submit($form, $postinfo) {
   drupal_set_message(t('Your test message has been sent.'));
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_send_test_message($send_to) {
   return drupal_mail('govdelivery', 'test_id', $send_to, array(), NULL, TRUE);
 }
 
 // Signup an email address for a specified list and pass any known questions and answers along.
-function govdelivery_test_subscriptions() {
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function govdelivery_test_subscriptions($form, &$form_state) {
   $form = array(
     'govdelivery_test_subscriptions' => array(
       '#type' => 'fieldset',
@@ -202,8 +229,8 @@ function govdelivery_test_subscriptions() {
       ),
       // Use Queue option
       'test' => array(
-      '#type' => 'submit',
-      '#value' => t('Test send message'),
+        '#type' => 'submit',
+        '#value' => t('Test send message'),
       ),
     ),
   );
@@ -213,12 +240,16 @@ function govdelivery_test_subscriptions() {
 
 // Need validation that there is only one subscriber or change to handle multiple subscriptions.
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_test_subscriptions_submit($form, $postinfo) {
   $subscriber = $postinfo['values']['govdelivery_test_subscriptions']['subscriber'];
   $list_code = $postinfo['values']['govdelivery_test_subscriptions']['list_code'];
 
   //if (isset($subscriber) && !empty($subscriber) && isset($list_code) && !empty($list_code)) {
-    $status = govdelivery_subscribe($list_code, $subscriber, FALSE);
+  $status = govdelivery_subscribe($list_code, $subscriber, FALSE);
   //}
 
   drupal_set_message(t('%response', array('%response' => $status ? 'Subscription Added.' : 'Subscription Failed.')));

@@ -2,18 +2,26 @@
 
 // Report of the GovDelivery Queues status.
 // Subject lines are links to a details page.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_message_queue_report() {
   $queue = 'govdelivery_message_queue';
   // Setup table fields mapping to the data.
   $header = array(
     array('data' => 'Subject'),
-    array('data' => 'Created', 'field' => 'day', 'sort' => 'DESC'),
+    array(
+      'data' => 'Created',
+      'field' => 'day',
+      'sort' => 'DESC',
+    ),
     array('data' => 'Form'),
   );
 
   // Query the database for the data.
-  $dataquery = "SELECT FROM_DAYS(TO_DAYS(FROM_UNIXTIME(created))) day, cid FROM {". $queue ."} GROUP BY day, cid " . tablesort_sql($header);
-  $countquery = "SELECT COUNT(*) FROM {". $queue ."}";
+  $dataquery = "SELECT FROM_DAYS(TO_DAYS(FROM_UNIXTIME(created))) day, cid FROM {" . $queue . "} GROUP BY day, cid " . tablesort_sql($header);
+  $countquery = "SELECT COUNT(*) FROM {" . $queue . "}";
   $result = pager_query($dataquery, 30, 0, $countquery);
 
   // Assign data to rows.
@@ -27,20 +35,29 @@ function govdelivery_message_queue_report() {
       $subject_link = l($subject_text, 'admin/reports/govdelivery_message_queue/details/' . $queuedmessage->cid);
       $rows[] = array($subject_link, $queuedmessage->day, check_plain($queuedmessage->data['id']));
     }
-  }// End while.
+  }
+  // End while.
 
   // Empty dataset message.
   if (empty($rows)) {
-    $rows[] = array(array('data' => t('No messages currently in the queue.'), 'colspan' => 3));
+    $rows[] = array(array(
+        'data' => t('No messages currently in the queue.'),
+        'colspan' => 3,
+      ));
   }
 
-  $output  = theme('table', $header, $rows);
-  $output .= theme('pager', NULL, 30, 0);
+  $output  = theme('table', array('header' => $header, 'rows' => $rows));
+  $output .= theme('pager', array('tags' => NULL, 'element' => 0));
 
   return $output;
-}// End govdelivery_message_queue_status.
+}
+// End govdelivery_message_queue_status.
 
 // View a single message in the queue.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_details($cid) {
   $queue = 'govdelivery_message_queue';
   // Build a table to display the message details.
@@ -55,16 +72,16 @@ function govdelivery_details($cid) {
       );
       // Setup the rows.
       $rows = array(
-        array('CID', check_plain($cid) ),
-        array('ID', check_plain($queuedmessage['id']) ),
-        array('To', check_plain($queuedmessage['to']) ),
-        array('Errors-To', check_plain($queuedmessage['headers']['Errors-To']) ),
-        array('Return-Path', check_plain($queuedmessage['headers']['Return-Path']) ),
-        array('Sender', check_plain($queuedmessage['headers']['Sender']) ),
-        array('Language', (empty($queuedmessage['language']) ? '' : implode(',', $queuedmessage['language'])) ),
-        array('Parameters', check_plain($queuedmessage['params']) ),
-        array('Subject', check_plain($queuedmessage['subject']) ),
-        array('Body', check_plain($queuedmessage['body']) ),
+        array('CID', check_plain($cid)),
+        array('ID', check_plain($queuedmessage['id'])),
+        array('To', check_plain($queuedmessage['to'])),
+        array('Errors-To', check_plain($queuedmessage['headers']['Errors-To'])),
+        array('Return-Path', check_plain($queuedmessage['headers']['Return-Path'])),
+        array('Sender', check_plain($queuedmessage['headers']['Sender'])),
+        array('Language', (empty($queuedmessage['language']) ? '' : implode(',', $queuedmessage['language']))),
+        array('Parameters', check_plain($queuedmessage['params'])),
+        array('Subject', check_plain($queuedmessage['subject'])),
+        array('Body', check_plain($queuedmessage['body'])),
       );
     }
   }
@@ -72,17 +89,24 @@ function govdelivery_details($cid) {
   // Empty dataset message.
   // If the data set is empty dont load the form.
   if (empty($rows)) {
-    $rows[] = array(array('data' => t('Message no longer in the queue.'), 'colspan' => 2));
+    $rows[] = array(array(
+        'data' => t('Message no longer in the queue.'),
+        'colspan' => 2,
+      ));
   }
   else {
     $output .= drupal_get_form('govdelivery_details_form', $cid);
   }
-  $output .= theme('table', $header, $rows);
+  $output .= theme('table', array('header' => $header, 'rows' => $rows));
 
   return $output;
 }
 
 // A form to send a message immediately.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_details_form($form, $cid) {
   $form = array(
     'govdelivery_details' => array(
@@ -90,13 +114,23 @@ function govdelivery_details_form($form, $cid) {
       '#title' => t('Message Actions'),
       '#tree' => TRUE,
       '#collapsible' => TRUE,
-      'cid' => array('#type' => 'value', '#value' => $cid),
-      'send' => array('#type' => 'submit', '#value' => t('Send Now')),
+      'cid' => array(
+        '#type' => 'value',
+        '#value' => $cid,
+      ),
+      'send' => array(
+        '#type' => 'submit',
+        '#value' => t('Send Now'),
+      ),
     ),
   );
   return $form;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_details_form_submit($form, &$postinfo) {
   $cid = $postinfo['values']['govdelivery_details']['cid'];
   // Send the message from the queue immediately.

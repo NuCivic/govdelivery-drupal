@@ -7,7 +7,7 @@
 
 //since we're basing this module heavily on the base webform select compoent, require that component
 $full_path = drupal_get_path('module', 'webform') . '/components/select.inc';
-require_once($full_path);
+require_once DRUPAL_ROOT . '/' . $full_path;
 
 /**
  * Implements _webform_defaults_component().
@@ -50,8 +50,8 @@ function _webform_theme_govd_subscribe() {
 function _webform_edit_govd_subscribe($component) {
   $form = array();
 
-  drupal_add_js(drupal_get_path('module', 'webform') . '/js/select-admin.js', 'module', 'header', FALSE, TRUE, FALSE);
-  drupal_add_js(array('webform' => array('selectOptionsUrl' => url('webform/ajax/options/' . $component['nid']))), 'setting');
+  drupal_add_js(drupal_get_path('module', 'webform') . '/js/select-admin.js', array('preprocess' => FALSE));
+  drupal_add_js(array('webform' => array('selectOptionsUrl' => url('webform/ajax/options/' . $component['nid']))), array('type' => 'setting', 'scope' => JS_DEFAULT));
 
   $other = array();
   if ($info = _webform_govd_subscribe_options_info()) {
@@ -121,6 +121,7 @@ function _webform_edit_govd_subscribe($component) {
     $form['items']['options']['option_settings'] = $other;
   }
   else {
+    // TODO Please change this theme call to use an associative array for the $variables parameter.
     $form['extra']['items'] = array(
       '#type' => 'textarea',
       '#title' => t('Options'),
@@ -139,6 +140,7 @@ function _webform_edit_govd_subscribe($component) {
     }
 
     $form['extra'] = array_merge($form['extra'], $other);
+    // TODO Please change this theme call to use an associative array for the $variables parameter.
     $form['value'] = array(
       '#type' => 'textfield',
       '#title' => t('Default value'),
@@ -181,54 +183,54 @@ function _webform_edit_govd_subscribe($component) {
 function _webform_edit_validate_govd_subscribe($element, &$form_state) {
   // Check for duplicate key values to prevent unexpected data loss. Require
   // all options to include a safe_key.
-/*  if (!empty($element['#value'])) {
-    $lines = explode("\n", trim($element['#value']));
-    $existing_keys = array();
-    $duplicate_keys = array();
-    $missing_keys = array();
-    $long_keys = array();
-    $group = '';
-    foreach ($lines as $line) {
-      $matches = array();
-      $line = trim($line);
-      if (preg_match('/^\<([^>]*)\>$/', $line, $matches)) {
-        $group = $matches[1];
-        $key = NULL; // No need to store group names.
-      }
-      elseif (preg_match('/^([^|]*)\|(.*)$/', $line, $matches)) {
-        $key = $matches[1];
-        if (strlen($key) > 128) {
-          $long_keys[] = $key;
-        }
-      }
-      else {
-        $missing_keys[] = $line;
-      }
+  /*  if (!empty($element['#value'])) {
+   $lines = explode("\n", trim($element['#value']));
+   $existing_keys = array();
+   $duplicate_keys = array();
+   $missing_keys = array();
+   $long_keys = array();
+   $group = '';
+   foreach ($lines as $line) {
+   $matches = array();
+   $line = trim($line);
+   if (preg_match('/^\<([^>]*)\>$/', $line, $matches)) {
+   $group = $matches[1];
+   $key = NULL; // No need to store group names.
+   }
+   elseif (preg_match('/^([^|]*)\|(.*)$/', $line, $matches)) {
+   $key = $matches[1];
+   if (strlen($key) > 128) {
+   $long_keys[] = $key;
+   }
+   }
+   else {
+   $missing_keys[] = $line;
+   }
 
-      if (isset($key)) {
-        if (isset($existing_keys[$group][$key])) {
-          $duplicate_keys[$key] = $key;
-        }
-        else {
-          $existing_keys[$group][$key] = $key;
-        }
-      }
-    }
+   if (isset($key)) {
+   if (isset($existing_keys[$group][$key])) {
+   $duplicate_keys[$key] = $key;
+   }
+   else {
+   $existing_keys[$group][$key] = $key;
+   }
+   }
+   }
 
-    if (!empty($missing_keys)) {
-      form_error($element, t('Every option must have a key specified. Specify each option as "safe_key|Some readable option".'));
-    }
+   if (!empty($missing_keys)) {
+   form_error($element, t('Every option must have a key specified. Specify each option as "safe_key|Some readable option".'));
+   }
 
-    if (!empty($long_keys)) {
-      form_error($element, t('Option keys must be less than 128 characters. The following keys exceed this limit:') . theme('item_list', $long_keys));
-    }
+   if (!empty($long_keys)) {
+   form_error($element, t('Option keys must be less than 128 characters. The following keys exceed this limit:') . theme('item_list', $long_keys));
+   }
 
-    if (!empty($duplicate_keys)) {
-      form_error($element, t('Options within the govd_subscribe list must be unique. The following keys have been used multiple times:') . theme('item_list', $duplicate_keys));
-    }
+   if (!empty($duplicate_keys)) {
+   form_error($element, t('Options within the govd_subscribe list must be unique. The following keys have been used multiple times:') . theme('item_list', $duplicate_keys));
+   }
 
-  }
-*/
+   }
+   */
   return TRUE;
 }
 
@@ -514,6 +516,7 @@ function _webform_submit_govd_subscribe($component, $value) {
  * Format the text output for this component.
  */
 function theme_webform_display_govd_subscribe($element) {
+  // TODO: Should this theme webform_display_govd_subscribe be declared in hook_theme()?
   $component = $element['#webform_component'];
 
   // Convert submitted 'safe' values to un-edited, original form.
@@ -548,7 +551,7 @@ function theme_webform_display_govd_subscribe($element) {
   }
 
   if ($element['#format'] == 'html') {
-    $output = count($items) > 1 ? theme('item_list', $items) : (isset($items[0]) ? $items[0] : ' ');
+    $output = count($items) > 1 ? theme('item_list', array('items' => $items)) : (isset($items[0]) ? $items[0] : ' ');
   }
   else {
     if (count($items) > 1) {
@@ -591,6 +594,7 @@ function _webform_analysis_govd_subscribe($component, $sids = array(), $single =
     ' AND cid = %d ' .
     " AND data != ''" . $sid_filter;
 
+  // TODO Please convert this statement to the D7 database API syntax.
   $result = db_query($query, array_merge(array($component['nid'], $component['cid']), $sids, array_keys($options)));
   $rows = array();
   $normal_count = 0;
@@ -609,7 +613,8 @@ function _webform_analysis_govd_subscribe($component, $sids = array(), $single =
 
     // Add a row for any unknown or user-entered values.
     if ($component['extra']['other_option']) {
-      $full_count = db_result(db_query($count_query, array_merge(array($component['nid'], $component['cid']), $sids)));
+      // TODO Please convert this statement to the D7 database API syntax.
+      $full_count = db_query($count_query, array_merge(array($component['nid'], $component['cid']), $sids))->fetchField();
       $other_count = $full_count - $normal_count;
       $display_option = !empty($component['extra']['other_text']) ? check_plain($component['extra']['other_text']) : t('Other...');
       $other_text = $other_count ? $other_count . ' (' . l(t('view'), 'node/' . $component['nid'] . '/webform-results/analysis/' . $component['cid']) . ')' : $other_count;
@@ -753,7 +758,7 @@ function webform_govd_subscribe_options_ajax($source_name = '') {
     'options' => $options,
   );
 
-  drupal_json($return);
+  drupal_json_output($return);
 }
 
 
@@ -922,15 +927,15 @@ function _webform_govd_subscribe_options_to_text($options) {
 
 /**
  * Utility function to shuffle an array while preserving key-value pairs.
-function _webform_shuffle_options(&$array) {
-  // First shuffle the array keys, then use them as the basis for ordering
-  // the options.
-  $aux = array();
-  $keys = array_keys($array);
-  shuffle($keys);
-  foreach ($keys as $key) {
-    $aux[$key] = $array[$key];
-  }
-  $array = $aux;
-}
+ function _webform_shuffle_options(&$array) {
+ // First shuffle the array keys, then use them as the basis for ordering
+ // the options.
+ $aux = array();
+ $keys = array_keys($array);
+ shuffle($keys);
+ foreach ($keys as $key) {
+ $aux[$key] = $array[$key];
+ }
+ $array = $aux;
+ }
  */

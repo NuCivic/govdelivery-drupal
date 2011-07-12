@@ -1,17 +1,22 @@
 <?php
 
 /**
- * Implements hook_perm().
+ * Implements hook_permission().
  */
-function govdelivery_perm() {
-  return array('Manage GovDelivery Settings');
+function govdelivery_permission() {
+  return array(
+    'Manage GovDelivery Settings' => array(
+      'title' => t('Manage GovDelivery Settings'),
+      'description' => t('TODO Add a description for \'Manage GovDelivery Settings\''),
+    ),
+  );
 }
 
 /**
  * Implements hook_menu().
  */
 function govdelivery_menu() {
-  $items['admin/settings/govdelivery'] = array(
+  $items['admin/config/govdelivery'] = array(
     'title' => 'GovDelivery Settings',
     'description' => 'Settings for GovDelivery to connect with the GovDelivery ODM and Subscription service.',
     'page callback' => 'drupal_get_form',
@@ -20,7 +25,7 @@ function govdelivery_menu() {
     'file' => 'govdelivery.admin.inc',
     'type' => MENU_NORMAL_ITEM,
   );
-  $items['admin/settings/govdelivery/test'] = array(
+  $items['admin/config/govdelivery/test'] = array(
     'title' => 'GovDelivery Settings Test - Messages',
     'description' => 'Test sending messages through Drupal correctly route to the GovDelivery service.',
     'page callback' => 'drupal_get_form',
@@ -29,7 +34,7 @@ function govdelivery_menu() {
     'file' => 'govdelivery.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/settings/govdelivery/test_subscriptions'] = array(
+  $items['admin/config/govdelivery/test_subscriptions'] = array(
     'title' => 'GovDelivery Settings Test - Subscriptions',
     'description' => 'Test signup process for GovDelivery Subscription services.',
     'page callback' => 'drupal_get_form',
@@ -61,7 +66,7 @@ function govdelivery_menu() {
 }
 
 /**
- *  Implementation of hook_mail
+ * Implements hook_mail().
  *
  *  @TODO Move to the admin code file.
  */
@@ -76,27 +81,39 @@ function govdelivery_mail($key, &$message, $params) {
   $message['body'] = "This is a test message from the GovDelivery system";
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_cron() {
   $govdelivery_subscription_settings = variable_get('govdelivery_subscription_settings', NULL);
   $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
 
   // If subscriptions cron is Enabled
-  if(isset($govdelivery_subscription_settings['cron_subscriptions']) && $govdelivery_subscription_settings['cron_subscriptions']) {
+  if (isset($govdelivery_subscription_settings['cron_subscriptions']) && $govdelivery_subscription_settings['cron_subscriptions']) {
     $messages_sent = govdelivery_process_subscription_queue();
   }
 
   // If subscriptions cron is Enabled
-  if(isset($govdelivery_odm_settings['cron_odm']) && $govdelivery_odm_settings['cron_odm']) {
+  if (isset($govdelivery_odm_settings['cron_odm']) && $govdelivery_odm_settings['cron_odm']) {
     $items_sent = govdelivery_process_message_queue();
   }
 }
 
 // Helper function when calling subscribe from the queue run
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_queued_subscribe($item) {
   return govdelivery_subscribe($item['code'], $item['email'], TRUE);
 }
 
 // Subscribe a user to a list via webservice
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_subscribe($list_code, $email, $from_queue = FALSE) {
   // Check the initial prototype input.
   if (is_null($list_code) || empty($list_code)) {
@@ -118,7 +135,10 @@ function govdelivery_subscribe($list_code, $email, $from_queue = FALSE) {
   }
 
   // Prototype input is good now lets check the settings.
-  $request =  array('code' => $list_code, 'email' => $email);
+  $request =  array(
+    'code' => $list_code,
+    'email' => $email,
+  );
   $key = md5(print_r($request, TRUE) . microtime() . strval(rand()));
 
   $govdelivery_subscription_settings = variable_get('govdelivery_subscription_settings', NULL);
@@ -151,13 +171,13 @@ function govdelivery_subscribe($list_code, $email, $from_queue = FALSE) {
   $result_code = $matches[1];
   $message = $matches[2];
 
-  // If the response code in the response header from govdelivery is anything other then 200 
+  // If the response code in the response header from govdelivery is anything other then 200
   // there is something seriously wrong with this request and we should consider it malicious.
-  // It also doesn't help that GovDelivery isn't sending back a standard response like the 
+  // It also doesn't help that GovDelivery isn't sending back a standard response like the
   // other error codes.
   if ($response->code != '200') {
     watchdog('govdelivery', 'Error subscribing - Email: %email List: %list The response from GovDelivery was not 200 meaning this request is probably malicious. This subscription will not be queued.',
-      array( '%email' => $request['email'], '%list' => $request['code'],), WATCHDOG_ERROR);
+      array('%email' => $request['email'], '%list' => $request['code']), WATCHDOG_ERROR);
     // Return TRUE to remove something from the queue
     if ($from_queue) {
       return TRUE;
@@ -166,7 +186,7 @@ function govdelivery_subscribe($list_code, $email, $from_queue = FALSE) {
   }
 
   // In the future we should be able to switch this to key off of $response->code but until then we need to keep parsing.
-  switch($result_code) {
+  switch ($result_code) {
     case "200":
       watchdog('govdelivery', 'Subscribed Email: %email to List: %list', array('%email' => $request['email'], '%list' => $request['code']), WATCHDOG_INFO);
       return TRUE;
@@ -175,7 +195,7 @@ function govdelivery_subscribe($list_code, $email, $from_queue = FALSE) {
     case "414":
     case "500":
       watchdog('govdelivery', 'Error subscribing - Email: %email List: %list Response: %response Message: %message; Item will not be queued.',
-        array( '%email' => $request['email'], '%list' => $request['code'], '%response' => $result_code, '%message' => $message), WATCHDOG_ERROR);
+        array('%email' => $request['email'], '%list' => $request['code'], '%response' => $result_code, '%message' => $message), WATCHDOG_ERROR);
       // Return TRUE to remove something from the queue
       if ($from_queue) {
         return TRUE;
@@ -187,24 +207,36 @@ function govdelivery_subscribe($list_code, $email, $from_queue = FALSE) {
         govdelivery_queue_set('govdelivery_subscription_queue', $key, $request);
       }
       watchdog('govdelivery', 'Error subscribing - Email:  %email List: %list Response: %response Message: %message; Item will be queued.',
-        array( '%email' => $request['email'], '%list' => $request['code'], '%response' => $result_code, '%message' => $message), WATCHDOG_ERROR);
+        array('%email' => $request['email'], '%list' => $request['code'], '%response' => $result_code, '%message' => $message), WATCHDOG_ERROR);
       return FALSE;
       break;
 
   }
 }
 
-function govdelivery_process_message_queue($messages = NULL, $ignore_max_time = FALSE, $cid=NULL) {
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function govdelivery_process_message_queue($messages = NULL, $ignore_max_time = FALSE, $cid = NULL) {
   $messages_sent = govdelivery_process_queue('govdelivery_message_queue', 'govdelivery_send_message', $messages, $ignore_max_time, $cid);
-  watchdog('govdelivery', 'Sent %messages messages when processing the govdelivery messsage queue.', array( '%messages' => $messages_sent), WATCHDOG_INFO);
+  watchdog('govdelivery', 'Sent %messages messages when processing the govdelivery messsage queue.', array('%messages' => $messages_sent), WATCHDOG_INFO);
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_process_subscription_queue($items = NULL, $ignore_max_time = FALSE, $cid = NULL) {
   $subscriptions = govdelivery_process_queue('govdelivery_subscription_queue', 'govdelivery_queued_subscribe', $items, $ignore_max_time, $cid);
-  watchdog('govdelivery', 'Subscribed %subscriptions emails when processing the govdelivery subscription queue.', array( '%subscriptions' => $subscriptions_processed), WATCHDOG_INFO);
+  watchdog('govdelivery', 'Subscribed %subscriptions emails when processing the govdelivery subscription queue.', array('%subscriptions' => $subscriptions_processed), WATCHDOG_INFO);
 }
 
-function govdelivery_process_queue($queue, $callback, $items = NULL, $ignore_max_time = FALSE, $cid=NULL) {
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function govdelivery_process_queue($queue, $callback, $items = NULL, $ignore_max_time = FALSE, $cid = NULL) {
   // checks for maximum execution time cribbed from the job_queue module: drupal.org/project/job_queue
   $max_execution_time = ini_get('max_execution_time');
   if (!$ignore_max_time && empty($max_execution_time)) {
@@ -224,6 +256,7 @@ function govdelivery_process_queue($queue, $callback, $items = NULL, $ignore_max
     register_shutdown_function('govdelivery_process_queue_cleanup');
     $items_sent = 0;
 
+    // TODO Please convert this statement to the D7 database API syntax.
     $cache_queue = db_query("SELECT cid FROM {" . $queue . "} ORDER BY created ASC");
 
     while ($queue_key = db_fetch_object($cache_queue)) {
@@ -232,8 +265,8 @@ function govdelivery_process_queue($queue, $callback, $items = NULL, $ignore_max
       // half of it in this module
       if (!$ignore_max_time && ( ((timer_read('page') / 1000) - $start_time ) > ($max_execution_time / 2))) {
         watchdog('govdelivery', 'Half of the available PHP execution time of %max_execution_time has been use processing the GovDelivery queue and processing will not continue.',
-          array( '%max_execution_time' => $max_execution_time), WATCHDOG_WARNING);
-        break;  // Stop once we have used over half of the maximum execution time
+          array('%max_execution_time' => $max_execution_time), WATCHDOG_WARNING);
+        break; // Stop once we have used over half of the maximum execution time
       }
 
       $i = $queue_key->cid;
@@ -253,15 +286,21 @@ function govdelivery_process_queue($queue, $callback, $items = NULL, $ignore_max
           }
         }
       }
-      if (isset($items) && ( $items_sent >= $items )) break;   // break if we've sent the requested number of items
+      if (isset($items) && ( $items_sent >= $items )) {
+        break; // break if we've sent the requested number of items
+      }
     }
 
-    variable_set('govdelivery_semaphore', time());
+    variable_set('govdelivery_semaphore', REQUEST_TIME);
     variable_del('govdelivery_semaphore');
     return $items_sent;
   }
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_process_queue_cleanup() {
   if (variable_get('govdelivery_semaphore', FALSE)) {
     watchdog('govdelivery', 'GovDelivery queue processing was aborted unexpectedly.  This could mean that the maximum execution time was exceeded or an uncaught exception occured in SOAP processing.', array(), WATCHDOG_WARNING);
@@ -271,9 +310,14 @@ function govdelivery_process_queue_cleanup() {
   }
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_queue_get($queue, $cid) {
   global $user;
 
+  // TODO Please convert this statement to the D7 database API syntax.
   $message = db_fetch_object(db_query("SELECT data, created, headers, expire, serialized FROM {" . $queue . "} WHERE cid = '%s'", $cid));
   if (isset($message->data)) {
     // If the data is permanent or we're not enforcing a minimum cache lifetime
@@ -287,40 +331,54 @@ function govdelivery_queue_get($queue, $cid) {
   return 0;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_queue_set($queue, $cid, $data) {
   $serialized = 0;
   if (is_object($data) || is_array($data)) {
     $data = serialize($data);
     $serialized = 1;
   }
-  $created = time();
+  $created = REQUEST_TIME;
+  // TODO Please convert this statement to the D7 database API syntax.
   db_query("UPDATE {" . $queue . "} SET data = %b, created = %d, serialized = %d WHERE cid = '%s'", $data, $created, $expire, $headers, $serialized, $cid);
   if (!db_affected_rows()) {
     @db_query("INSERT INTO {" . $queue . "} (cid, data, created, serialized) VALUES ('%s', %b, %d, %d)", $cid, $data, $created, $serialized);
   }
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_queue_remove($queue, $cid) {
   global $user;
+  // TODO Please convert this statement to the D7 database API syntax.
   db_query("DELETE FROM {" . $queue . "} WHERE cid = '%s'", $cid);
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_send_message($message) {
   $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
   $sendsuccess = TRUE;
 
   if (class_exists('SoapClient')) {
-    include_once('odmService.php');
+    include_once DRUPAL_ROOT . '/' . 'odmService.php';
 
     $email = new odmService($govdelivery_odm_settings['server']);
 
     $ODMmessage = new ODMMessage();
 
-    // Basically this is saying that a to list can be either an array 
-    // or a comma seperated values list. 
+    // Basically this is saying that a to list can be either an array
+    // or a comma seperated values list.
     // If it is an array each array item may still be a command seperated list
-    // So we need to parse the comma seperated list of each array element. 
-    // If it is not initially an array then we need to check for a comma seperated list 
+    // So we need to parse the comma seperated list of each array element.
+    // If it is not initially an array then we need to check for a comma seperated list
     // only once and then proceede.
     // Its really weird but its possible.
     $recipients = array();
@@ -340,14 +398,14 @@ function govdelivery_send_message($message) {
       $tolist = explode(',', $message["to"]);
       if (is_array($tolist)) {
         $filtered_list = array_map("govdelivery_filter_email", $tolist);
-        $recipients = array_merge($recipients , $filtered_list);
+        $recipients = array_merge($recipients, $filtered_list);
       }
       else {
         $recipients[] = govdelivery_filter_email($tolist);
       }
     }
 
-    $ODMmessage->to = (array)$recipients;
+    $ODMmessage->to = (array) $recipients;
     $account_map = variable_get("govdelivery_account_map", NULL);
 
     if (isset($account_map)) {
@@ -406,6 +464,10 @@ function govdelivery_send_message($message) {
 
 // the user may have put in an address of the form "Full Name" <email@domain.tld> instead of just the address,
 // so we want to filter to the right address
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_filter_email($address) {
 
   // borrowed from the drupal valid_email_address($mail) function
@@ -423,6 +485,10 @@ function govdelivery_filter_email($address) {
 }
 
 // Send messages immediately or to the queue if enabled.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_process_message($key, $message) {
   // Check preferences
   $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
@@ -444,10 +510,15 @@ function govdelivery_process_message($key, $message) {
   if (!$send_success) {
     govdelivery_queue_set('govdelivery_message_queue', $key, $message);
   }
-}// End govdelivery_send.
+}
+// End govdelivery_send.
 
 
 // Implement nagios_info hook to allow enabling/disabling our nagios notifications.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_nagios_info() {
   return array(
     'name' => 'GovDelivery',
@@ -456,6 +527,10 @@ function govdelivery_nagios_info() {
 } // End govdelivery_nagios_info.
 
 // Implement nagios() hook to send data about the queue status to nagios.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_nagios() {
   $table = 'govdelivery_message_queue';
 
@@ -464,7 +539,8 @@ function govdelivery_nagios() {
   $warning_threshold = variable_get('govdelivery_nagios_warning_threshold', 1000);
 
   // Query for a backlog.
-  $count = db_result(db_query('SELECT COUNT(cid) FROM {'. $table .'}'));
+  // TODO Please convert this statement to the D7 database API syntax.
+  $count = db_query('SELECT COUNT(cid) FROM {' . $table . '}')->fetchField();
 
   if (is_numeric($count) && is_numeric($critical_threshold) && is_numeric($warning_threshold)) {
     if ($count > $critical_threshold) {
@@ -491,25 +567,30 @@ function govdelivery_nagios() {
       'status' => $status,
       'type' => 'state',
       'text' => $text,
-    )
+    ),
   );
-}// End govdelivery_nagios.
+}
+// End govdelivery_nagios.
 
 // Add settings to the nagios configuration page.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_nagios_settings() {
   $form = array(
     'GovDelivery' => array(
       'govdelivery_nagios_critical_threshold' => array(
-        '#type'          => 'textfield',
-        '#title'         => t('Critical Threshold'),
+        '#type' => 'textfield',
+        '#title' => t('Critical Threshold'),
         '#default_value' => variable_get('govdelivery_nagios_critical_threshold', 5000),
-        '#description'   => t('Issue a critical alert when GovDelivery has this number of messages queued. (Make this greater then the warning number)'),
+        '#description' => t('Issue a critical alert when GovDelivery has this number of messages queued. (Make this greater then the warning number)'),
       ),
       'govdelivery_nagios_warning_threshold' => array(
-        '#type'          => 'textfield',
-        '#title'         => t('Warning Threshold'),
+        '#type' => 'textfield',
+        '#title' => t('Warning Threshold'),
         '#default_value' => variable_get('govdelivery_nagios_warning_threshold', 1000),
-        '#description'   => t('Issue a warning alert when GovDelivery has this number of messages queued. (Make this less then the critical alert number)'),
+        '#description' => t('Issue a warning alert when GovDelivery has this number of messages queued. (Make this less then the critical alert number)'),
       ),
     ),
   );

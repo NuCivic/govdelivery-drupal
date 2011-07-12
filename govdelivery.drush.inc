@@ -7,7 +7,7 @@
 
 
 /**
- * Implementation of hook_drush_command().
+ * Implements hook_drush_command().
  *
  * In this hook, you specify which commands your
  * drush module makes available, what it does and
@@ -64,7 +64,7 @@ function govdelivery_drush_command() {
 }
 
 /**
- * Implementation of hook_drush_help().
+ * Implements hook_drush_help().
  *
  * This function is called whenever a drush user calls
  * 'drush help <name-of-your-command>'
@@ -129,9 +129,13 @@ function drush_govdelivery_send_test_message($address) {
   else {
     drush_log("Sending a test message failed", 'failed', TRUE);
   }
-  return $success ;
+  return $success;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function govdelivery_drush_subscribe($code, $address) {
   $success = govdelivery_subscribe($code, $address);
   if ( $success ) {
@@ -140,5 +144,5 @@ function govdelivery_drush_subscribe($code, $address) {
   else {
     drush_log("User could not be subscribed", 'failed', TRUE);
   }
-  return $success ;
+  return $success;
 }

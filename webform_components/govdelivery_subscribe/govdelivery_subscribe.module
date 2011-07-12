@@ -8,11 +8,11 @@
  */
 
 /**
- * Implements hook_webform_component_info()
+ * Implements hook_webform_component_info().
  */
 function govdelivery_subscribe_webform_component_info() {
   $componets = array();
-  
+
   $components['govd_subscribe'] = array(
     'label' => t('GovDelivery Subscribe'),
     'description' => t('Provide one or more options for GovDelivery mailinglists to which users can subscribe'),
@@ -21,39 +21,39 @@ function govdelivery_subscribe_webform_component_info() {
       'required' => FALSE, //the intent is not to provide mandatory subscribing
     ),
     'file' => 'govdelivery_subscribe.component.inc',
-  );  
+  );
 
   return $components;
 }
 
 /**
- * Implements hook_webform_submission_insert
- *  
+ * Implements hook_webform_submission_insert().
+ *
  * This function is used to process subscriptions from webforms
- * The intention is to be generic and reusable. 
- * 
- * Use the webform module to add a govd_select component anywhere you would like to add 
+ * The intention is to be generic and reusable.
+ *
+ * Use the webform module to add a govd_select component anywhere you would like to add
  * subscriptions.
  *
- * This module also does a search on the form to find an email address component. If multiple email address 
- * components appear on the same form the last one will always be selected. 
+ * This module also does a search on the form to find an email address component. If multiple email address
+ * components appear on the same form the last one will always be selected.
  */
-function govdelivery_subscribe_webform_submission_insert ($node, $submission) { 
+function govdelivery_subscribe_webform_submission_insert($node, $submission) {
   //find govd_subscribe components on the node and capture their cid's so we can use them to pull the data from the submission
   $govd_components = array();
-  $email_component_value = ''; 
-  foreach($node->webform['components'] as $cid=>$component) {
-    if($component['type']=='govd_subscribe') {
+  $email_component_value = '';
+  foreach ($node->webform['components'] as $cid => $component) {
+    if ($component['type'] == 'govd_subscribe') {
       $govd_components[] = $cid;
     }
-    else if($component['type']=='email' || $component['type']=='uniquemail') {
+    else if ($component['type'] == 'email' || $component['type'] == 'uniquemail') {
       $email_component_value = $submission->data[$cid]['value'][0];
     }
   }
 
   //make sure we have govd components and an email, otherwise don't bother continuing
   if (!$govd_components) {
-    return;  //form has no govd_subscribe components
+    return; //form has no govd_subscribe components
   }
   if (!$email_component_value) {
     watchdog('GovD Subscribe', "Unable to retrieve email address from webform at nid: $submission->nid, submission: $submission->sid");
@@ -62,14 +62,14 @@ function govdelivery_subscribe_webform_submission_insert ($node, $submission) {
 
   //grab the selected options from the govd component
   $govd_subscriptions = array();
-  foreach($govd_components as $cid) {
-    if($submission->data[$cid]['value']) {
+  foreach ($govd_components as $cid) {
+    if ($submission->data[$cid]['value']) {
       $govd_subscriptions = array_merge($govd_subscriptions, $submission->data[$cid]['value']);
     }
   }
-  
+
   //subscribe them
-  foreach($govd_subscriptions as $subscription_key) {
+  foreach ($govd_subscriptions as $subscription_key) {
     govdelivery_subscribe($subscription_key, $email_component_value, FALSE);
   }
 }
