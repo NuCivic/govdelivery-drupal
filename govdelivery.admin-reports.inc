@@ -150,7 +150,6 @@ function govdelivery_details_form($form, $cid) {
  * @see http://drupal.org/node/1354
  */
 function govdelivery_details_form_submit($form, &$postinfo) {
-  watchdog('ben', 'Inside details form submit: ' . var_export($form, TRUE));
   $cid = $postinfo['build_info']['args'][0];
   // Send the message from the queue immediately.
   if (!empty($cid)) {

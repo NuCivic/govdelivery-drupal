@@ -465,7 +465,6 @@ function govdelivery_send_message($message) {
     $status = $email->sendMessage($ODMmessage);
 
     // @todo Get a full list of ODM response codes.
-watchdog('ben', 'send status: ' . var_export($status, TRUE));
     $sendsuccess = FALSE;
     if (isset($status[0])) {
       switch($status[0]) {
