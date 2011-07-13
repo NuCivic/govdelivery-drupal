@@ -55,12 +55,12 @@ function govdelivery_settings($form, &$form_state) {
   $subscription_fieldset['service_url'] = array(
     '#type' => "textfield",
     '#title' => t('URL for Subscription Service'),
-    '#default_value' => url($govdelivery_subscription_settings['service_url']),
+    '#default_value' => url((isset($govdelivery_subscription_settings['service_url']) ? $govdelivery_subscription_settings['service_url'] : '')),
   );
 
   $subscription_fieldset['cron_subscriptions'] = array(
     '#type' => 'radios',
-    '#default_value' => $govdelivery_subscription_settings['cron_subscriptions'],
+    '#default_value' => (isset($govdelivery_subscription_settings['cron_subscriptions']) ? $govdelivery_subscription_settings['cron_subscriptions'] : ''),
     '#title' => t('Subscriptions Cron (Will automatically resend the subscriptions queue on cron runs)'),
     '#options' => array('Disabled', 'Enabled'),
   );
@@ -75,23 +75,23 @@ function govdelivery_settings($form, &$form_state) {
       'server' => array(
         '#type' => "textfield",
         '#title' => 'server',
-        '#default_value' => $govdelivery_odm_settings['server'],
+        '#default_value' => url((isset($govdelivery_odm_settings['server']) ? $govdelivery_odm_settings['server'] : '')),
       ),
       'enabled' => array(
         '#type' => 'radios',
-        '#default_value' => $govdelivery_odm_settings['enabled'],
+        '#default_value' => (isset($govdelivery_odm_settings['enabled']) ? $govdelivery_odm_settings['enabled'] : ''),
         '#title' => t('Outbound mail rerouting'),
         '#options' => array('Disabled', 'Enabled'),
       ),
       'queue' => array(
         '#type' => 'radios',
-        '#default_value' => $govdelivery_odm_settings['queue'],
+        '#default_value' => (isset($govdelivery_odm_settings['queue']) ? $govdelivery_odm_settings['queue'] : ''),
         '#title' => t('Queue Messages (Messages that fail to send are queued regardless of this setting)'),
         '#options' => array('Disabled', 'Enabled'),
       ),
       'cron_odm' => array(
         '#type' => 'radios',
-        '#default_value' => $govdelivery_odm_settings['cron_odm'],
+        '#default_value' => (isset($govdelivery_odm_settings['cron_odm']) ? $govdelivery_odm_settings['cron_odm'] : ''),
         '#title' => t('Messages Cron (Will automatically resend the messages queue on cron runs)'),
         '#options' => array('Disabled', 'Enabled'),
       ),
@@ -153,11 +153,16 @@ function govdelivery_settings_submit($form, $postinfo) {
   variable_set('govdelivery_subscription_settings', $govdelivery_subscription_settings);
 
   if ($postinfo['values']['govdelivery_odm_settings']['enabled'] == 1) {
-    $path = drupal_get_path('module', 'govdelivery');
-    variable_set('smtp_library', $path . "/govdelivery_library.inc");
+    $mail_system = variable_get('mail_system');
+    $mail_system['default-system'] = 'GovDeliveryMailSystem';
+    variable_set('mail_system', $mail_system);
   }
   else {
-    variable_del('smtp_library');
+    $mail_system = variable_get('mail_system');
+    if (isset($mail_system) && !empty($mail_system['default-system'])) {
+      $mail_system['default-system'] = 'DefaultMailSystem';
+      variable_set('mail_system', $mail_system);
+    }
   }
 }
 

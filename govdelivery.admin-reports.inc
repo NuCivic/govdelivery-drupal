@@ -13,30 +13,40 @@ function govdelivery_message_queue_report() {
     array('data' => 'Subject'),
     array(
       'data' => 'Created',
-      'field' => 'day',
+      'field' => 'created',
       'sort' => 'DESC',
     ),
     array('data' => 'Form'),
   );
 
   // Query the database for the data.
-  $dataquery = "SELECT FROM_DAYS(TO_DAYS(FROM_UNIXTIME(created))) day, cid FROM {" . $queue . "} GROUP BY day, cid " . tablesort_sql($header);
-  $countquery = "SELECT COUNT(*) FROM {" . $queue . "}";
-  $result = pager_query($dataquery, 30, 0, $countquery);
+  // $dataquery = "SELECT FROM_DAYS(TO_DAYS(FROM_UNIXTIME(created))) day, cid FROM {" . $queue . "} GROUP BY day, cid " . tablesort_sql($header);
+  // $countquery = "SELECT COUNT(*) FROM {" . $queue . "}";
+  // $result = pager_query($dataquery, 30, 0, $countquery);
+
+  $query = db_select('govdelivery_message_queue', 'q')
+    ->extend('PagerDefault')
+    ->extend('TableSort')
+    ->limit(30)
+    ->fields('q', array('created', 'cid'))
+    ->groupBy('created')
+    ->groupBy('cid');
+  $result = $query->execute();
 
   // Assign data to rows.
   $rows = array();
-  while ($queuedmessage = db_fetch_object($result)) {
-    // Get the message unserialized.
+
+  foreach ($result as $queuedmessage) {
+// Get the message unserialized.
     $queuedmessage->data = govdelivery_queue_get($queue, $queuedmessage->cid);
-    // Build the row.
-    if ($queuedmessage->data != 0) {
+// Build the row.
+    if (isset($queuedmessage->data) && !empty($queuedmessage->data)) {
       $subject_text = $queuedmessage->data['subject'] ? $queuedmessage->data['subject'] : t('(no subject)');
       $subject_link = l($subject_text, 'admin/reports/govdelivery_message_queue/details/' . $queuedmessage->cid);
-      $rows[] = array($subject_link, $queuedmessage->day, check_plain($queuedmessage->data['id']));
+      $rows[] = array($subject_link, $queuedmessage->created, check_plain($queuedmessage->data['id']));
     }
   }
-  // End while.
+  // End foreach.
 
   // Empty dataset message.
   if (empty($rows)) {
@@ -59,6 +69,8 @@ function govdelivery_message_queue_report() {
  * @see http://drupal.org/node/1354
  */
 function govdelivery_details($cid) {
+  $output = '';
+  
   $queue = 'govdelivery_message_queue';
   // Build a table to display the message details.
   if (!empty($cid)) {
@@ -74,15 +86,18 @@ function govdelivery_details($cid) {
       $rows = array(
         array('CID', check_plain($cid)),
         array('ID', check_plain($queuedmessage['id'])),
+        array('Module', (isset($queuedmessage['module']) ? check_plain($queuedmessage['module']) : '')),
+        array('Key', (isset($queuedmessage['key']) ? check_plain($queuedmessage['key']) : '')),
         array('To', check_plain($queuedmessage['to'])),
-        array('Errors-To', check_plain($queuedmessage['headers']['Errors-To'])),
-        array('Return-Path', check_plain($queuedmessage['headers']['Return-Path'])),
-        array('Sender', check_plain($queuedmessage['headers']['Sender'])),
         array('Language', (empty($queuedmessage['language']) ? '' : implode(',', $queuedmessage['language']))),
         array('Parameters', check_plain($queuedmessage['params'])),
-        array('Subject', check_plain($queuedmessage['subject'])),
-        array('Body', check_plain($queuedmessage['body'])),
+        array('Subject', (isset($queuedmessage['subject']) ? check_plain($queuedmessage['subject']) : '')),
+        array('Body', (isset($queuedmessage['body']) ? check_plain($queuedmessage['body']) : '')),
       );
+      //headers
+      foreach($queuedmessage['headers'] as $key => $value) {
+        $rows[] = array(check_plain($key), check_plain($value));
+      }
     }
   }
 
@@ -95,7 +110,10 @@ function govdelivery_details($cid) {
       ));
   }
   else {
-    $output .= drupal_get_form('govdelivery_details_form', $cid);
+    // Im in extreme disstress here as referenced in http://drupal.org/node/224333#unrendered
+    // I don't have time or the will to rewrite this whole report.
+    // @todo make this support views and vbo and provide a base report.
+    $output .= drupal_render(drupal_get_form('govdelivery_details_form', $cid));
   }
   $output .= theme('table', array('header' => $header, 'rows' => $rows));
 
@@ -132,7 +150,8 @@ function govdelivery_details_form($form, $cid) {
  * @see http://drupal.org/node/1354
  */
 function govdelivery_details_form_submit($form, &$postinfo) {
-  $cid = $postinfo['values']['govdelivery_details']['cid'];
+  watchdog('ben', 'Inside details form submit: ' . var_export($form, TRUE));
+  $cid = $postinfo['build_info']['args'][0];
   // Send the message from the queue immediately.
   if (!empty($cid)) {
     $sent = govdelivery_process_message_queue(NULL, FALSE, $cid);

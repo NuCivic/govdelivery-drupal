@@ -4,4 +4,5 @@ package = Administration
 project = "Other"
 core = 7.x
 
-files[] = odmService.php
+files[] = govdelivery.mail.inc
+files[] = libraries/odmService.php

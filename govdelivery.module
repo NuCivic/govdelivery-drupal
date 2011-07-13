@@ -7,7 +7,7 @@ function govdelivery_permission() {
   return array(
     'Manage GovDelivery Settings' => array(
       'title' => t('Manage GovDelivery Settings'),
-      'description' => t('TODO Add a description for \'Manage GovDelivery Settings\''),
+      'description' => t('Manage GovDelivery Accounts, Service Endpoints, Enable/Disable Cron Events, Enable/Disable Queuing, Send Test Messages/Subscriptions, Manage the Mail Queue'),
     ),
   );
 }
@@ -16,7 +16,7 @@ function govdelivery_permission() {
  * Implements hook_menu().
  */
 function govdelivery_menu() {
-  $items['admin/config/govdelivery'] = array(
+  $items['admin/config/services/govdelivery'] = array(
     'title' => 'GovDelivery Settings',
     'description' => 'Settings for GovDelivery to connect with the GovDelivery ODM and Subscription service.',
     'page callback' => 'drupal_get_form',
@@ -25,7 +25,7 @@ function govdelivery_menu() {
     'file' => 'govdelivery.admin.inc',
     'type' => MENU_NORMAL_ITEM,
   );
-  $items['admin/config/govdelivery/test'] = array(
+  $items['admin/config/services/govdelivery/test'] = array(
     'title' => 'GovDelivery Settings Test - Messages',
     'description' => 'Test sending messages through Drupal correctly route to the GovDelivery service.',
     'page callback' => 'drupal_get_form',
@@ -34,7 +34,7 @@ function govdelivery_menu() {
     'file' => 'govdelivery.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/config/govdelivery/test_subscriptions'] = array(
+  $items['admin/config/services/govdelivery/test_subscriptions'] = array(
     'title' => 'GovDelivery Settings Test - Subscriptions',
     'description' => 'Test signup process for GovDelivery Subscription services.',
     'page callback' => 'drupal_get_form',
@@ -229,7 +229,7 @@ function govdelivery_process_message_queue($messages = NULL, $ignore_max_time = 
  */
 function govdelivery_process_subscription_queue($items = NULL, $ignore_max_time = FALSE, $cid = NULL) {
   $subscriptions = govdelivery_process_queue('govdelivery_subscription_queue', 'govdelivery_queued_subscribe', $items, $ignore_max_time, $cid);
-  watchdog('govdelivery', 'Subscribed %subscriptions emails when processing the govdelivery subscription queue.', array('%subscriptions' => $subscriptions_processed), WATCHDOG_INFO);
+  watchdog('govdelivery', 'Subscribed %subscriptions emails when processing the govdelivery subscription queue.', array('%subscriptions' => $subscriptions), WATCHDOG_INFO);
 }
 
 /**
@@ -257,9 +257,14 @@ function govdelivery_process_queue($queue, $callback, $items = NULL, $ignore_max
     $items_sent = 0;
 
     // TODO Please convert this statement to the D7 database API syntax.
-    $cache_queue = db_query("SELECT cid FROM {" . $queue . "} ORDER BY created ASC");
+    //$cache_queue = db_query("SELECT cid FROM {" . $queue . "} ORDER BY created ASC");
+    $query = db_select($queue, 'q');
+    $query->fields('q', array('cid'));
+    $query->orderBy('q.created');
+    $cache_queue = $query->execute();
 
-    while ($queue_key = db_fetch_object($cache_queue)) {
+    foreach ($cache_queue as $queue_key) {
+    //while ($queue_key = db_fetch_object($cache_queue)) {
       // check our status against the maximum execution time for a request, and if we've used half of it we want to
       // stop processing - it was formerly checking whether half the time was used, rather than whether we had used
       // half of it in this module
@@ -317,18 +322,18 @@ function govdelivery_process_queue_cleanup() {
 function govdelivery_queue_get($queue, $cid) {
   global $user;
 
-  // TODO Please convert this statement to the D7 database API syntax.
-  $message = db_fetch_object(db_query("SELECT data, created, headers, expire, serialized FROM {" . $queue . "} WHERE cid = '%s'", $cid));
-  if (isset($message->data)) {
-    // If the data is permanent or we're not enforcing a minimum cache lifetime
-    // always return the cached data.
-    $message->data = db_decode_blob($message->data);
-    if ($message->serialized) {
-      $message->data = unserialize($message->data);
-    }
+  $query = db_select($queue, 'q');
+  $query->fields('q', array('data', 'created', 'expire', 'serialized'));
+  $query->condition('q.cid', $cid);
+  $result = $query->execute();
+
+  $message = $result->fetchObject();
+  //$message = db_fetch_object(db_query("SELECT data, created, headers, expire, serialized FROM {" . $queue . "} WHERE cid = '%s'", $cid));
+  if (isset($message->data) && !empty($message->data)) {
+    $message->data = unserialize($message->data);
     return $message->data;
   }
-  return 0;
+  return FALSE;
 }
 
 /**
@@ -341,11 +346,33 @@ function govdelivery_queue_set($queue, $cid, $data) {
     $data = serialize($data);
     $serialized = 1;
   }
+
   $created = REQUEST_TIME;
-  // TODO Please convert this statement to the D7 database API syntax.
-  db_query("UPDATE {" . $queue . "} SET data = %b, created = %d, serialized = %d WHERE cid = '%s'", $data, $created, $expire, $headers, $serialized, $cid);
-  if (!db_affected_rows()) {
-    @db_query("INSERT INTO {" . $queue . "} (cid, data, created, serialized) VALUES ('%s', %b, %d, %d)", $cid, $data, $created, $serialized);
+  //db_query("UPDATE {" . $queue . "} SET data = %b, created = %d, serialized = %d WHERE cid = '%s'", $data, $created, $serialized, $cid);
+  try {
+    $query = db_update($queue);
+    $query->fields(array(
+        'data' => $data,
+        'created' => $created,
+        'serialized' => $serialized,
+      ));
+    $query->condition('cid', $cid);
+    $num_updated = $query->execute();
+
+    if ($num_updated <= 0) {
+      //@db_query("INSERT INTO {" . $queue . "} (cid, data, created, serialized) VALUES ('%s', %b, %d, %d)", $cid, $data, $created, $serialized);
+      db_insert($queue)
+        ->fields(array(
+          'cid' => $cid,
+          'data' => $data,
+          'created' => $created,
+          'serialized' => $serialized,
+        ))
+        ->execute();
+    }
+  }
+  catch (Exception $e) {
+    watchdog('govdelivery', 'Queue Set Error: @e', array('@e' => $e->getMessage()), WATCHDOG_NOTICE);
   }
 }
 
@@ -355,8 +382,10 @@ function govdelivery_queue_set($queue, $cid, $data) {
  */
 function govdelivery_queue_remove($queue, $cid) {
   global $user;
-  // TODO Please convert this statement to the D7 database API syntax.
-  db_query("DELETE FROM {" . $queue . "} WHERE cid = '%s'", $cid);
+  //db_query("DELETE FROM {" . $queue . "} WHERE cid = '%s'", $cid);
+  db_delete($queue)
+    ->condition('cid', $cid)
+    ->execute();
 }
 
 /**
@@ -365,11 +394,8 @@ function govdelivery_queue_remove($queue, $cid) {
  */
 function govdelivery_send_message($message) {
   $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
-  $sendsuccess = TRUE;
 
   if (class_exists('SoapClient')) {
-    include_once DRUPAL_ROOT . '/' . 'odmService.php';
-
     $email = new odmService($govdelivery_odm_settings['server']);
 
     $ODMmessage = new ODMMessage();
@@ -406,26 +432,19 @@ function govdelivery_send_message($message) {
     }
 
     $ODMmessage->to = (array) $recipients;
+
+    // Check account mappings from the settings file.
+    // @todo fix this so that a checkbox can select the default account in the admin area
     $account_map = variable_get("govdelivery_account_map", NULL);
-
-    if (isset($account_map)) {
-      $account = $account_map[$message["id"]];
-      if (!isset($account)) {
-        $account = $account_map["default"];
-        if (!isset($account)) {
-          watchdog('govdelivery', 'No default account specified.  Check settings.php.', NULL, WATCHDOG_ERROR);
-          return FALSE;
-        }
-      }
-
-      $ODMmessage->fromName = $govdelivery_odm_settings['accounts'][$account]['fromname'];
-      $ODMmessage->userName = $account;
-      $ODMmessage->password = $govdelivery_odm_settings['accounts'][$account]['password'];
-    }
-    else {
-      watchdog('govdelivery', 'GovDelivery account mapping has not been set.  Check settings.php.', NULL, WATCHDOG_ERROR);
+    $account = (isset($account_map[$message['id']]) ? $account_map[$message['id']] : $account_map['default']);
+    if (!isset($account) || empty($account)) {
+      watchdog('govdelivery', 'No default account specified.  Check settings.php.', NULL, WATCHDOG_ERROR);
       return FALSE;
     }
+
+    $ODMmessage->fromName = $govdelivery_odm_settings['accounts'][$account]['fromname'];
+    $ODMmessage->userName = $account;
+    $ODMmessage->password = $govdelivery_odm_settings['accounts'][$account]['password'];
 
     // check for XML/XHTML or oldstyle html
     $xml_start = strpos(trim($message["body"]), "<?xml");
@@ -444,19 +463,27 @@ function govdelivery_send_message($message) {
     $ODMmessage->emailColumn = "email";
 
     $status = $email->sendMessage($ODMmessage);
-    if ($status) {
-      $sendsuccess = !$status[0]; // 0 is successfull !0 is fail.
-    }
-    else {
-      $sendsuccess = FALSE;
-    }
-  }
-  else {
+
+    // @todo Get a full list of ODM response codes.
+watchdog('ben', 'send status: ' . var_export($status, TRUE));
     $sendsuccess = FALSE;
+    if (isset($status[0])) {
+      switch($status[0]) {
+        case '0': // Success
+          $sendsuccess = TRUE;
+          break;
+        case '8': // Invalid Email
+          $sendsuccess = TRUE; // We return true so that we can trick the queueing system.
+          break;
+        default:
+          $sendsuccess = FALSE;
+      }
+    }
   }
 
   if (!$sendsuccess) {
-    watchdog('govdelivery', 'The soap client failed to send a message. It will be queued for resend on the next cron run', NULL, WATCHDOG_WARNING);
+    watchdog('govdelivery', 'The soap client failed to send a message. It will be queued for resend on the next cron run. Message: @m', 
+      array('@m' => (isset($status[1]) ? $status[1] : '')), WATCHDOG_WARNING);
   }
 
   return $sendsuccess;
@@ -481,7 +508,7 @@ function govdelivery_filter_email($address) {
 
   // the regex below is adapted from drupal's valid_email_address($mail) function
   preg_match("/$user@($domain|(\[($ipv4|$ipv6)\]))/", $address, $matches);
-  return $matches[0];
+  return (isset($matches[0]) ? $matches[0] : '');
 }
 
 // Send messages immediately or to the queue if enabled.
@@ -539,8 +566,11 @@ function govdelivery_nagios() {
   $warning_threshold = variable_get('govdelivery_nagios_warning_threshold', 1000);
 
   // Query for a backlog.
-  // TODO Please convert this statement to the D7 database API syntax.
-  $count = db_query('SELECT COUNT(cid) FROM {' . $table . '}')->fetchField();
+  //$count = db_query('SELECT COUNT(cid) FROM {' . $table . '}')->fetchField();
+  $query = db_select($table, 't');
+  $query->fields('t', array('cid'));
+  $query->countQuery();
+  $count = $query->execute();
 
   if (is_numeric($count) && is_numeric($critical_threshold) && is_numeric($warning_threshold)) {
     if ($count > $critical_threshold) {
