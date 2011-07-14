@@ -56,7 +56,7 @@ function govdelivery_settings() {
 
   $subscription_fieldset['cron_subscriptions'] = array(
     '#type' => 'radios',
-    '#default_value' => $govdelivery_subscription_settings['cron_subscriptions'],
+    '#default_value' => (isset($govdelivery_subscription_settings['cron_subscriptions']) ? $govdelivery_subscription_settings['cron_subscriptions'] : 'Enabled'),
     '#title' => t('Subscriptions Cron (Will automatically resend the subscriptions queue on cron runs)'),
     '#options' => array('Disabled', 'Enabled'),
   );
@@ -87,7 +87,7 @@ function govdelivery_settings() {
       ),
       'cron_odm' => array(
         '#type' => 'radios',
-        '#default_value' => $govdelivery_odm_settings['cron_odm'],
+        '#default_value' => (isset($govdelivery_odm_settings['cron_odm']) ? $govdelivery_odm_settings['cron_odm'] : 'Enabled'),
         '#title' => t('Messages Cron (Will automatically resend the messages queue on cron runs)'),
         '#options' => array('Disabled', 'Enabled'),
       ),
