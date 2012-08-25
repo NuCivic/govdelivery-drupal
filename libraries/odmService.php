@@ -5,112 +5,154 @@
  * ODM Services for the GovDelivery Integration module.
  */
 
-class ODMMessage {
-  public $body; // string
-  public $emailColumn; // string
-  public $fromName; // string
-  public $password; // string
-  public $recordDesignator; // string
-  public $subject; // string
-  public $to; // ArrayOf_soapenc_string
-  public $userName; // string
-}
+class XMLData {
+  public function xmlSpecialChars($data) {
+    $strict = TRUE; // Strict checking is required for mb_detect to be useful.
+    $isEndcoded = mb_detect_encoding($data, array('UTF-8'), $strict); // Empty string if it's not in the list of encodings to check.
+    if(!empty($isEncoded)) {
+      return preg_replace('@[\x00-\x08\x0B\x0C\x0E-\x1F]@', ' ', $data);
+    }
 
-class ReportingResponse {
-  public $clickRate; // string
-  public $clicks; // string
-  public $clicksPCT; // string
-  public $deferred; // string
-  public $deferredPCT; // string
-  public $deferred_failed; // string
-  public $deferred_succeeded; // string
-  public $deliveredPCT; // string
-  public $endDate; // string
-  public $failed; // string
-  public $failedPCT; // string
-  public $inQueue; // string
-  public $invalid; // string
-  public $lastClick; // string
-  public $lastOpen; // string
-  public $mph; // string
-  public $opens; // string
-  public $opensPCT; // string
-  public $sent; // string
-  public $sentPCT; // string
-  public $serialID; // string
-  public $startDate; // string
-  public $status; // string
-  public $total; // string
+    return utf8_encode(preg_replace('@[\x00-\x08\x0B\x0C\x0E-\x1F]@', ' ', $data));
+  }
 }
-
 
 /**
- * odmService class
+ * Please use the constructor or the setters to prevent invalid characters from making it into a SOAP request.
+ */
+class ODMCredentials extends XMLData {
+  public $realm = 'ODM';
+  public $username;
+  public $password;
+
+  public function __construct($username, $password) {
+    $this->username = parent::xmlSpecialChars($username);
+    $this->password = parent::xmlSpecialChars($password);
+  }
+
+  public function setRealm($data) {
+    $this->realm = parent::xmlSpecialChars($data);
+  }
+
+  public function setUsername($username) {
+    $this->username = parent::xmlSpecialChars($username);
+  }
+
+  public function setPassword($password) {
+    $this->password = parent::xmlSpecialChars($password);
+  }
+}
+
+class ODMMessage extends XMLData {
+  public $body;
+  public $emailColumn = 'email';
+  public $fromName;
+  public $recordDesignator = 'email';
+  public $subject;
+  public $to;
+  public $trackClicks = TRUE;
+  public $trackOpens = TRUE;
+
+
+  /*public function __set($name, $value) {
+    watchdog('ben', 'CALLED SET');
+    $this->$name = parent::xmlSpecialChars($value);
+  }*/
+
+  public function setBody($body) {
+    $this->body = parent::xmlSpecialChars($body);
+  }
+
+  public function setEmailColumn($emailColumn) {
+    $this->emailColumn = parent::xmlSpecialChars($emailColumn);
+  }
+
+  public function setFromName($fromName) {
+    $this->fromName = parent::xmlSpecialChars($fromName);
+  }
+
+  public function setRecordDesignator($recordDesignator) {
+    $this->recordDesignator = parent::xmlSpecialChars($recordDesignator);
+  }
+
+  public function setSubject($subject) {
+    $this->subject = parent::xmlSpecialChars($subject);
+  }
+}
+
+class ODMDeliveryActivitySince extends XMLData {
+  public $maxresults;
+  public $sequence = '';
+
+  public function setSequence($sequence) {
+    $this->sequence = parent::xmlSpecialChars($sequence);
+  }
+}
+
+/**
+ * ODMv2 Service class
  *
- *
- *
- * @author    {author}
- * @copyright {copyright}
- * @package   {package}
  */
 class odmService extends SoapClient {
-  public $server_uri;
+  public $server_uri = 'http://odm.govdelivery.com/ODMv2';
 
   private static $classmap = array(
-    'ODMMessage' => 'ODMMessage',
-    'ReportingResponse' => 'ReportingResponse',
+    'credentials' => 'ODMCredentials',
+    'message' => 'ODMMessage',
+    'deliveryActivitySince' => 'ODMDeliveryActivitySince',
   );
 
-  public function odmService($wsdl, $options = array()) {
-    foreach (self::$classmap as $key => $value) {
+  public function odmService($wsdl, ODMCredentials $credentials, $options = array()) {
+   foreach (self::$classmap as $key => $value) {
       if (!isset($options['classmap'][$key])) {
         $options['classmap'][$key] = $value;
       }
     }
+
+    // @todo must be used if runtime debugging feature is added.
+    $options['trace'] = true;
+
+    $this->setCredentialsHeader($credentials);
+
     parent::__construct($wsdl, $options);
+
+  }
+
+  private function setCredentialsHeader(ODMCredentials $credentials) {
+    // Generate the needed credential headers.
+    // @todo SimpleXMLElement::getDocNamespaces
+    $header = new SoapHeader($this->server_uri,                           // Setup the correct namespace...I can't find a good way to query the base namespace from the wsdl. 
+                             'credentials',                               // Encapsulating tag.
+                             new SoapVar($credentials, SOAP_ENC_OBJECT)); // Generates an unencapsulated set of xml tags and their values. 
+
+    // Set the credentials to the header section of the soap envelope.
+    $this->__setSoapHeaders($header); 
   }
 
   /**
+   * Implements the wsdl sendMessage function.
    *
+   * @todo Add a runtime debugging switch.
    *
-   * @param ODMMessage $in0
-   * @return ArrayOf_soapenc_string
+   * @param ODMCredentials $credentials
+   * @param ODMMessage $message
+   * @return mixed
+   *   Returns string on success and null or SoapFault exception on failure.
    */
-  public function sendMessage(ODMMessage $in0) {
-    try {
-      $time_before = (timer_read('page') / 1000);
-      watchdog("govdelivery", "About to call __soapCall - page timer: !timer", array('!timer' => $time_before ), WATCHDOG_NOTICE);
-      $result = $this->__soapCall('sendMessage', array($in0), array(
-          'uri' => $this->server_uri,
-          'soapaction' => ''
-        )
-      );
-      $result_str = var_export($result, TRUE);
-      $time_after = (timer_read('page') / 1000);
-      watchdog("govdelivery", "Return from call to __soapCall - result: @result, page timer: @timer, elapsed time: @elapsed", array('@result' => $result_str, '@timer' => $time_after, '@elapsed' => $time_after - $time_before ), WATCHDOG_NOTICE);
-      return $result;
-    } catch (Exception $e) {
-        watchdog("govdelivery", "Exception when calling GovDelivery SOAP Service: " . $e->getMessage());
-        $result_str = var_export($result, TRUE);
-        watchdog("govdelivery", "Exception in __soapCall - result: @result, page timer: @timer, elapsed time: @elapsed", array('@result' => $result_str, '@timer' => $time_after, '@elapsed' => $time_after - $time_before ), WATCHDOG_NOTICE);
-        $ret = array();
-        $ret[0] = 1;
-        return $ret;
-    }
+  public function sendMessage(ODMMessage $message) {
+    // Use the autogenerated base method that SoapClient class generates when using a valid WSDL.
+    $result = parent::sendMessage($message);
+    return $result;
   }
 
-  /**
-   *
-   *
-   * @param string $in0
-   * @return ReportingResponse
-   */
-  public function messageReport($in0) {
-    return $this->__soapCall('messageReport', array($in0), array(
-        'uri' => $this->server_uri,
-        'soapaction' => ''
-      )
-    );
-  }
+  public function deliveryActivitySince (ODMDeliveryActivitySince $deliveryActivitySince) {
+    $result = parent::deliveryActivitySince($deliveryActivitySince);
 
+/*    $handle = fopen('/tmp/govd_odmv2.tmp', 'a+');
+    fwrite($handle, 'Last Request' . PHP_EOL . $this->__getLastRequest());
+    fclose($handle);
+ */
+
+    return $result; 
+  }
 }

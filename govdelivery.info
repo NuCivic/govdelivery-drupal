@@ -6,3 +6,5 @@ core = 7.x
 
 files[] = govdelivery.mail.inc
 files[] = libraries/odmService.php
+files[] = libraries/GovDeliverySubscriberAPI.php
+

@@ -57,7 +57,9 @@ function _webform_edit_govd_subscribe($component) {
   if ($info = _webform_govd_subscribe_options_info()) {
     $options = array('' => t('None'));
     foreach ($info as $name => $source) {
-      $options[$name] = $source['title'];
+      $clean_name = check_plain($name);
+      $clean_title = check_plain($source['title']);
+      $options[$clean_name] = $clean_title;
     }
 
     $other['options_source'] = array(
@@ -84,7 +86,7 @@ function _webform_edit_govd_subscribe($component) {
     $other['other_text'] = array(
       '#type' => 'textfield',
       '#title' => t('Text for "Other..." option'),
-      '#default_value' => $component['extra']['other_text'],
+      '#default_value' => check_plain($component['extra']['other_text']),
       '#description' => t('If allowing other options, enter text to be used for other-enabling option.'),
       '#parents' => array('extra', 'other_text'),
       '#weight' => 3,
@@ -144,7 +146,7 @@ function _webform_edit_govd_subscribe($component) {
     $form['value'] = array(
       '#type' => 'textfield',
       '#title' => t('Default value'),
-      '#default_value' => $component['value'],
+      '#default_value' => check_plain($component['value']),
       '#description' => t('The default value of the field identified by its key. For multiple govd_subscribes use commas to separate multiple defaults.') . theme('webform_token_help'),
       '#size' => 60,
       '#maxlength' => 1024,
@@ -274,14 +276,14 @@ function _webform_render_govd_subscribe($component, $value = NULL, $filter = TRU
       // Set the value as an array.
       $element['#default_value'] = array();
       foreach ((array) $value as $key => $option_value) {
-        $element['#default_value'][] = $option_value;
+        $element['#default_value'][] = check_plain($option_value);
       }
     }
     else {
       // Set the value as a single string.
       $element['#default_value'] = '';
       foreach ((array) $value as $option_value) {
-        $element['#default_value'] = $option_value;
+        $element['#default_value'] = check_plain($option_value);
       }
     }
   }
@@ -338,7 +340,7 @@ function _webform_render_govd_subscribe($component, $value = NULL, $filter = TRU
     if ($component['extra']['multiple']) {
       // Set display as a checkbox set.
       $element['#type'] = 'checkboxes';
-      // Drupal 6 hack to properly render on multipage forms.
+      // Drupal 6 to properly render on multipage forms.
       $element['#process'] = array('govd_subscribe_expand_checkboxes', 'webform_expand_govd_subscribe_ids');
     }
     else {
@@ -375,8 +377,8 @@ function webform_expand_govd_subscribe_or_other($element) {
 }
 
 /**
- * Drupal 6 hack that properly *renders* checkboxes in multistep forms. This is
- * different than the value hack needed in Drupal 5, which is no longer needed.
+ * Drupal 6ism that properly *renders* checkboxes in multistep forms. This is
+ * different than the value code needed in Drupal 5, which is no longer needed.
  */
 function govd_subscribe_expand_checkboxes($element) {
   // Elements that have a value set are already in the form structure cause
@@ -463,7 +465,7 @@ function webform_expand_govd_subscribe_ids($element) {
  */
 function _webform_display_govd_subscribe($component, $value, $format = 'html') {
   return array(
-    '#title' => $component['name'],
+    '#title' => check_plain($component['name']),
     '#weight' => $component['weight'],
     '#theme' => 'webform_display_govd_subscribe',
     '#theme_wrappers' => $format == 'html' ? array('webform_element', 'webform_element_wrapper') : array('webform_element_text'),

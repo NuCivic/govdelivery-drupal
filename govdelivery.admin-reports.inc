@@ -89,15 +89,31 @@ function govdelivery_details($cid) {
         array('Module', (isset($queuedmessage['module']) ? check_plain($queuedmessage['module']) : '')),
         array('Key', (isset($queuedmessage['key']) ? check_plain($queuedmessage['key']) : '')),
         array('To', check_plain($queuedmessage['to'])),
-        array('Language', (empty($queuedmessage['language']) ? '' : implode(',', $queuedmessage['language']))),
-        array('Parameters', check_plain($queuedmessage['params'])),
         array('Subject', (isset($queuedmessage['subject']) ? check_plain($queuedmessage['subject']) : '')),
         array('Body', (isset($queuedmessage['body']) ? check_plain($queuedmessage['body']) : '')),
       );
-      //headers
-      foreach($queuedmessage['headers'] as $key => $value) {
-        $rows[] = array(check_plain($key), check_plain($value));
+      // Language
+      if (isset($queuedmessage['language']) && !empty($queuedmessage['language'])) {
+        if (is_object($queuedmessage['language'])) {
+          $rows[] = array('Language', check_plain($queuedmessage['language']->language));
+        }
+        else {
+          $rows[] = array('Language', check_plain($queuedmessage['language']));
+        }
       }
+      //params
+      if (isset($queuedmessage['params']) && is_array($queuedmessage['params'])) {
+        foreach($queuedmessage['params'] as $key => $value) {
+          $rows[] = array(check_plain($key), check_plain($value));
+        }
+      }
+      //headers
+      if (isset($queuedmessage['headers']) && is_array($queuedmessage['headers'])) {
+        foreach($queuedmessage['headers'] as $key => $value) {
+          $rows[] = array(check_plain($key), check_plain($value));
+        }
+      }
+
     }
   }
 
@@ -113,7 +129,7 @@ function govdelivery_details($cid) {
     // Im in extreme disstress here as referenced in http://drupal.org/node/224333#unrendered
     // I don't have time or the will to rewrite this whole report.
     // @todo make this support views and vbo and provide a base report.
-    $output .= drupal_render(drupal_get_form('govdelivery_details_form', $cid));
+    $output .= drupal_render(drupal_get_form('govdelivery_details_form', check_plain($cid)));
   }
   $output .= theme('table', array('header' => $header, 'rows' => $rows));
 
