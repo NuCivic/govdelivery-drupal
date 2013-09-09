@@ -1,23 +1,30 @@
 <?php
-/*
+/**
  * @file
- * Install, update and uninstall functions for the
- * GovDelivery Integration module.
+ * Install, update and uninstall functions for the govdelivery module.
  */
 
+/**
+ * Installation.
+ */
 function govdelivery_install() {
   drupal_install_schema('govdelivery');
 }
 
+/**
+ * Uninstallation.
+ */
 function govdelivery_uninstall() {
   drupal_uninstall_schema('govdelivery_message_queue');
   drupal_uninstall_schema('govdelivery_subscription_queue');
   variable_del('smtp_library');
   variable_del('govdelivery_odm_settings');
   variable_del('govdelivery_subscription_settings');
-  variable_del('govdelivery_test_settings');
 }
 
+/**
+ * Implements hook_schema().
+ */
 function govdelivery_schema() {
   $schema_system_cache = drupal_get_schema_unprocessed('system', 'cache');
   $schema['govdelivery_message_queue'] = $schema_system_cache;
@@ -25,21 +32,27 @@ function govdelivery_schema() {
   return $schema;
 }
 
+/**
+ * Installation update.
+ */
 function govdelivery_update_6001() {
   $ret = array();
   db_rename_table($ret, 'cache_govdelivery', 'govdelivery_queue');
   return $ret;
 }
 
+/**
+ * Installation update.
+ */
 function govdelivery_update_6002() {
   $ret = array();
 
-  $govdelivery_settings=variable_get('govdelivery_settings', array());
+  $govdelivery_settings = variable_get('govdelivery_settings', array());
 
-  if ( isset($govdelivery_settings) && isset($govdelivery_settings['username']) ) {
+  if (isset($govdelivery_settings) && isset($govdelivery_settings['username'])) {
     $accounts[$govdelivery_settings['username']] = array(
       'password' => $govdelivery_settings['password'],
-      'fromname' => $govdelivery_settings['fromname']
+      'fromname' => $govdelivery_settings['fromname'],
     );
     unset($govdelivery_settings['fromname']);
     unset($govdelivery_settings['username']);
@@ -52,22 +65,25 @@ function govdelivery_update_6002() {
   return $ret;
 }
 
+/**
+ * Installation update.
+ */
 function govdelivery_update_6003() {
   $ret = array();
 
-  // convert the settings for new approach of having settigns for both sending messages and subscribing
-  // users to a list
-  $govdelivery_settings=variable_get('govdelivery_settings', array());
-  if ( isset($govdelivery_settings) ) {
+  // Convert the settings for new approach of having settigns for both
+  // sending messages and subscribing users to a list.
+  $govdelivery_settings = variable_get('govdelivery_settings', array());
+  if (isset($govdelivery_settings)) {
     variable_set('govdelivery_odm_settings', $govdelivery_settings);
     variable_del('govdelivery_settings');
     $ret[] = "Converted GovDelivery settings to use new naming that splits ODM from subscription settings";
   }
 
-  // rename message send queue to reflect multiple queues
+  // Rename message send queue to reflect multiple queues.
   db_rename_table($ret, 'govdelivery_queue', 'govdelivery_message_queue');
 
-  // create subscription queue for retries
+  // Create subscription queue for retries.
   $table = drupal_get_schema_unprocessed('systen', 'cache');
   $table['description'] = 'Store subscription requests that are unable to be sent for transmitting to govdelivery later';
   db_create_table($ret, 'govdelivery_subscription_queue', $table);

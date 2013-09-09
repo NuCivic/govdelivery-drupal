@@ -1,13 +1,11 @@
 <?php
-
 /**
  * @file
  * Drush functions for the GovDelivery Integration module.
  */
 
-
 /**
- * Implementation of hook_drush_command().
+ * Implements hook_drush_command().
  *
  * In this hook, you specify which commands your
  * drush module makes available, what it does and
@@ -18,18 +16,15 @@
  *
  * @See drush_parse_command()
  *   for a list of recognized keys.
- *
- * @return
- *   An associative array describing your command(s).
  */
 function govdelivery_drush_command() {
   $items = array();
 
-  // the key in the $items array is the name of the command.
+  // The key in the $items array is the name of the command.
   $items['govdelivery-send'] = array(
-    // the name of the function implementing your command.
+    // The name of the function implementing your command.
     'callback' => 'drush_govdelivery_send_queued_messages',
-    // a short description of your command
+    // A short description of your command.
     'description' => "Send the messages in the govdelivery queue",
     'arguments' => array(
       'type' => 'The type of the queue that should be sent.',
@@ -37,22 +32,22 @@ function govdelivery_drush_command() {
     'aliases' => array('govds'),
   );
 
-  // the key in the $items array is the name of the command.
+  // The key in the $items array is the name of the command.
   $items['govdelivery-test'] = array(
-    // the name of the function implementing your command.
+    // The name of the function implementing your command.
     'callback' => 'drush_govdelivery_send_test_message',
-    // a short description of your command
+    // A short description of your command.
     'description' => "Send a test message using the GovDelivery service test functionality.",
     'arguments' => array(
       'addresses' => 'Email to send a test message to.',
     ),
   );
 
-  // the key in the $items array is the name of the command.
+  // The key in the $items array is the name of the command.
   $items['govdelivery-subscribe'] = array(
-    // the name of the function implementing your command.
+    // The name of the function implementing your command.
     'callback' => 'govdelivery_drush_subscribe',
-    // a short description of your command
+    // A short description of your command.
     'description' => "Sends subscriptions from the subscription queue.",
     'arguments' => array(
       'code' => 'List code for subscription',
@@ -64,39 +59,42 @@ function govdelivery_drush_command() {
 }
 
 /**
- * Implementation of hook_drush_help().
+ * Implements hook_drush_help().
  *
  * This function is called whenever a drush user calls
  * 'drush help <name-of-your-command>'
- *
- * @param
- *   A string with the help section (prepend with 'drush:')
- *
- * @return
- *   A string with the help text for your command.
  */
 function govdelivery_drush_help($section) {
+  $help = NULL;
   switch ($section) {
     case 'drush:govdelivery send':
-      return dt("Sends messages from the govdelivery message queue, either messages or subscribers queue.");
+      $help = dt("Send messages or subscriptions from the GovDelivery queues.");
     case 'drush:govdelivery test':
-      return dt("Sends a test message using govdelivery (this will be queued and sent on the next queue process)");
+      $help = dt("Sends a test message using govdelivery (this may be queued or sent immediately depending on the settings.)");
     case 'drush:govdelivery subscribe':
-      return dt("Subscribes a user to a list managed by govdelivery");
+      $help = dt("Subscribes a user to a list managed by govdelivery (this may be queued or sent immediately depending on the settings.)");
   }
+  return $help;
 }
 
-function drush_govdelievery_queue_types() {
+/**
+ * Types of queue.
+ *
+ * @return array
+ *   Queue types.
+ */
+function drush_govdelivery_queue_types() {
   $types = array(
     'messages' => array('govdelivery_message_queue', 'govdelivery_send_message'),
     'subscribers' => array('govdelivery_subscription_queue', 'govdelivery_queued_subscribe'),
   );
   return $types;
 }
+
 /**
  * Send messages from the govdelivery queue.
  *
- * @param
+ * @param string $type
  *   The number of messages to send from the queue.
  */
 function drush_govdelivery_send_queued_messages($type = NULL) {
@@ -108,7 +106,7 @@ function drush_govdelivery_send_queued_messages($type = NULL) {
     $choice = drush_choice($types, 'Which queue would you like to process', '!key');
     $messages_sent = govdelivery_process_queue($types[$choice]['0'], $types[$choice]['1']);
   }
-  if ( ( $messages_sent ) || ( $messages_sent === 0 ) ) {
+  if (($messages_sent) || ($messages_sent === 0)) {
     drush_log("Message queue has been processed, " . $messages_sent . " messages sent.", 'completed');
   }
   else {
@@ -116,29 +114,50 @@ function drush_govdelivery_send_queued_messages($type = NULL) {
   }
 }
 
+/**
+ * Send a test message.
+ *
+ * @param string $address
+ *   Email address.
+ *
+ * @return bool
+ *   If successful.
+ */
 function drush_govdelivery_send_test_message($address) {
-  if ( !isset($address) ) {
+  if (!isset($address)) {
     drush_log("Cannot send a test message without an address to send to", 'failed', TRUE);
     return FALSE;
   }
 
-  $success = govdelivery_send_test_message($address);
-  if ( $success ) {
+    $success = govdelivery_send_test_message($address);
+  if ($success) {
     drush_log("Test message has been queued.  It will be sent the next time the queue is processed.", 'completed');
   }
   else {
     drush_log("Sending a test message failed", 'failed', TRUE);
   }
-  return $success ;
+
+  return $success;
 }
 
+/**
+ * Subscribe to list.
+ *
+ * @param int $code
+ *   List code.
+ * @param string $address
+ *   Email address.
+ *
+ * @return bool
+ *   If successful.
+ */
 function govdelivery_drush_subscribe($code, $address) {
   $success = govdelivery_subscribe($code, $address);
-  if ( $success ) {
+  if ($success) {
     drush_log("User has been subscribed to the list", 'completed');
   }
   else {
     drush_log("User could not be subscribed", 'failed', TRUE);
   }
-  return $success ;
+  return $success;
 }

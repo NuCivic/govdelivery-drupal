@@ -1,6 +1,5 @@
-name = GovDelivery
-description = Integrates drupal mail with a different outbound mail system (non smtp)
-package = Administration
-project = "Other"
+name = GovDelivery TMS integration
+description = Integrates Drupal mail with a different outbound mail system (non SMTP).
+package = GovDelivery
 core = 6.x
 
