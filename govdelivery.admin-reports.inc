@@ -1,10 +1,13 @@
 <?php
-
-// Report of the GovDelivery Queues status.
-// Subject lines are links to a details page.
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * @file
+ * Admin reports.
+ */
+
+/**
+ * Report of the govdelivery Queues status.
+ *
+ * Subject lines are links to a details page.
  */
 function govdelivery_message_queue_report() {
   $queue = 'govdelivery_message_queue';
@@ -20,10 +23,10 @@ function govdelivery_message_queue_report() {
   );
 
   // Query the database for the data.
-  // $dataquery = "SELECT FROM_DAYS(TO_DAYS(FROM_UNIXTIME(created))) day, cid FROM {" . $queue . "} GROUP BY day, cid " . tablesort_sql($header);
+  // $dataquery = "SELECT FROM_DAYS(TO_DAYS(FROM_UNIXTIME(created))) day,
+  // cid FROM {" . $queue . "} GROUP BY day, cid " . tablesort_sql($header);
   // $countquery = "SELECT COUNT(*) FROM {" . $queue . "}";
   // $result = pager_query($dataquery, 30, 0, $countquery);
-
   $query = db_select('govdelivery_message_queue', 'q')
     ->extend('PagerDefault')
     ->extend('TableSort')
@@ -37,16 +40,19 @@ function govdelivery_message_queue_report() {
   $rows = array();
 
   foreach ($result as $queuedmessage) {
-// Get the message unserialized.
+    // Get the message unserialized.
     $queuedmessage->data = govdelivery_queue_get($queue, $queuedmessage->cid);
-// Build the row.
+    // Build the row.
     if (isset($queuedmessage->data) && !empty($queuedmessage->data)) {
       $subject_text = $queuedmessage->data['subject'] ? $queuedmessage->data['subject'] : t('(no subject)');
       $subject_link = l($subject_text, 'admin/reports/govdelivery_message_queue/details/' . $queuedmessage->cid);
-      $rows[] = array($subject_link, $queuedmessage->created, check_plain($queuedmessage->data['id']));
+      $rows[] = array(
+        $subject_link,
+        $queuedmessage->created,
+        check_plain($queuedmessage->data['id']),
+      );
     }
   }
-  // End foreach.
 
   // Empty dataset message.
   if (empty($rows)) {
@@ -58,19 +64,16 @@ function govdelivery_message_queue_report() {
 
   $output  = theme('table', array('header' => $header, 'rows' => $rows));
   $output .= theme('pager', array('tags' => NULL, 'element' => 0));
-
   return $output;
 }
-// End govdelivery_message_queue_status.
 
-// View a single message in the queue.
+
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * View a single message in the queue.
  */
 function govdelivery_details($cid) {
   $output = '';
-  
+
   $queue = 'govdelivery_message_queue';
   // Build a table to display the message details.
   if (!empty($cid)) {
@@ -92,7 +95,7 @@ function govdelivery_details($cid) {
         array('Subject', (isset($queuedmessage['subject']) ? check_plain($queuedmessage['subject']) : '')),
         array('Body', (isset($queuedmessage['body']) ? check_plain($queuedmessage['body']) : '')),
       );
-      // Language
+      // Language.
       if (isset($queuedmessage['language']) && !empty($queuedmessage['language'])) {
         if (is_object($queuedmessage['language'])) {
           $rows[] = array('Language', check_plain($queuedmessage['language']->language));
@@ -101,19 +104,18 @@ function govdelivery_details($cid) {
           $rows[] = array('Language', check_plain($queuedmessage['language']));
         }
       }
-      //params
+      // Params.
       if (isset($queuedmessage['params']) && is_array($queuedmessage['params'])) {
-        foreach($queuedmessage['params'] as $key => $value) {
+        foreach ($queuedmessage['params'] as $key => $value) {
           $rows[] = array(check_plain($key), check_plain($value));
         }
       }
-      //headers
+      // Headers.
       if (isset($queuedmessage['headers']) && is_array($queuedmessage['headers'])) {
-        foreach($queuedmessage['headers'] as $key => $value) {
+        foreach ($queuedmessage['headers'] as $key => $value) {
           $rows[] = array(check_plain($key), check_plain($value));
         }
       }
-
     }
   }
 
@@ -126,26 +128,24 @@ function govdelivery_details($cid) {
       ));
   }
   else {
-    // Im in extreme disstress here as referenced in http://drupal.org/node/224333#unrendered
+    // Im in extreme disstress here as referenced in
+    // http://drupal.org/node/224333#unrendered
     // I don't have time or the will to rewrite this whole report.
     // @todo make this support views and vbo and provide a base report.
     $output .= drupal_render(drupal_get_form('govdelivery_details_form', check_plain($cid)));
   }
   $output .= theme('table', array('header' => $header, 'rows' => $rows));
-
   return $output;
 }
 
-// A form to send a message immediately.
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * A form to send a message immediately.
  */
 function govdelivery_details_form($form, $cid) {
   $form = array(
     'govdelivery_details' => array(
       '#type' => 'fieldset',
-      '#title' => t('Message Actions'),
+      '#title' => t('Message actions'),
       '#tree' => TRUE,
       '#collapsible' => TRUE,
       'cid' => array(
@@ -161,9 +161,9 @@ function govdelivery_details_form($form, $cid) {
   return $form;
 }
 
+
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Submit details form.
  */
 function govdelivery_details_form_submit($form, &$postinfo) {
   $cid = $postinfo['build_info']['args'][0];

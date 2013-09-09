@@ -1,11 +1,11 @@
 <?php
-
 /**
  * @file
  * Webform module multiple govd_subscribe component.
  */
 
-//since we're basing this module heavily on the base webform select compoent, require that component
+// Since we're basing this module heavily on the base webform select
+// compoent, require that component.
 $full_path = drupal_get_path('module', 'webform') . '/components/select.inc';
 require_once DRUPAL_ROOT . '/' . $full_path;
 
@@ -123,7 +123,8 @@ function _webform_edit_govd_subscribe($component) {
     $form['items']['options']['option_settings'] = $other;
   }
   else {
-    // TODO Please change this theme call to use an associative array for the $variables parameter.
+    // TODO Please change this theme call to use an associative array for
+    // the $variables parameter.
     $form['extra']['items'] = array(
       '#type' => 'textarea',
       '#title' => t('Options'),
@@ -142,7 +143,8 @@ function _webform_edit_govd_subscribe($component) {
     }
 
     $form['extra'] = array_merge($form['extra'], $other);
-    // TODO Please change this theme call to use an associative array for the $variables parameter.
+    // TODO Please change this theme call to use an associative array
+    // for the $variables parameter.
     $form['value'] = array(
       '#type' => 'textfield',
       '#title' => t('Default value'),
@@ -175,7 +177,6 @@ function _webform_edit_govd_subscribe($component) {
     '#description' => t('Randomizes the order of the options when they are displayed in the form.'),
     '#parents' => array('extra', 'optrand'),
   );
-
   return $form;
 }
 
@@ -186,53 +187,57 @@ function _webform_edit_validate_govd_subscribe($element, &$form_state) {
   // Check for duplicate key values to prevent unexpected data loss. Require
   // all options to include a safe_key.
   /*  if (!empty($element['#value'])) {
-   $lines = explode("\n", trim($element['#value']));
-   $existing_keys = array();
-   $duplicate_keys = array();
-   $missing_keys = array();
-   $long_keys = array();
-   $group = '';
-   foreach ($lines as $line) {
-   $matches = array();
-   $line = trim($line);
-   if (preg_match('/^\<([^>]*)\>$/', $line, $matches)) {
-   $group = $matches[1];
-   $key = NULL; // No need to store group names.
-   }
-   elseif (preg_match('/^([^|]*)\|(.*)$/', $line, $matches)) {
-   $key = $matches[1];
-   if (strlen($key) > 128) {
-   $long_keys[] = $key;
-   }
-   }
-   else {
-   $missing_keys[] = $line;
-   }
+  $lines = explode("\n", trim($element['#value']));
+  $existing_keys = array();
+  $duplicate_keys = array();
+  $missing_keys = array();
+  $long_keys = array();
+  $group = '';
+  foreach ($lines as $line) {
+  $matches = array();
+  $line = trim($line);
+  if (preg_match('/^\<([^>]*)\>$/', $line, $matches)) {
+  $group = $matches[1];
+  $key = NULL; // No need to store group names.
+  }
+  elseif (preg_match('/^([^|]*)\|(.*)$/', $line, $matches)) {
+  $key = $matches[1];
+  if (strlen($key) > 128) {
+  $long_keys[] = $key;
+  }
+  }
+  else {
+  $missing_keys[] = $line;
+  }
 
-   if (isset($key)) {
-   if (isset($existing_keys[$group][$key])) {
-   $duplicate_keys[$key] = $key;
-   }
-   else {
-   $existing_keys[$group][$key] = $key;
-   }
-   }
-   }
+  if (isset($key)) {
+  if (isset($existing_keys[$group][$key])) {
+  $duplicate_keys[$key] = $key;
+  }
+  else {
+  $existing_keys[$group][$key] = $key;
+  }
+  }
+  }
 
-   if (!empty($missing_keys)) {
-   form_error($element, t('Every option must have a key specified. Specify each option as "safe_key|Some readable option".'));
-   }
+  if (!empty($missing_keys)) {
+  form_error($element, t('Every option must have a key specified.
+  Specify each option as "safe_key|Some readable option".'));
+  }
 
-   if (!empty($long_keys)) {
-   form_error($element, t('Option keys must be less than 128 characters. The following keys exceed this limit:') . theme('item_list', $long_keys));
-   }
+  if (!empty($long_keys)) {
+  form_error($element, t('Option keys must be less than 128 characters. The
+  following keys exceed this limit:') . theme('item_list', $long_keys));
+  }
 
-   if (!empty($duplicate_keys)) {
-   form_error($element, t('Options within the govd_subscribe list must be unique. The following keys have been used multiple times:') . theme('item_list', $duplicate_keys));
-   }
+  if (!empty($duplicate_keys)) {
+  form_error($element, t('Options within the govd_subscribe list must be
+  unique. The following keys have been used multiple times:') .
+  theme('item_list', $duplicate_keys));
+  }
 
-   }
-   */
+  }
+  */
   return TRUE;
 }
 
@@ -240,7 +245,6 @@ function _webform_edit_validate_govd_subscribe($element, &$form_state) {
  * Implements _webform_render_component().
  */
 function _webform_render_govd_subscribe($component, $value = NULL, $filter = TRUE) {
-
   $element = array(
     '#title' => $filter ? _webform_filter_xss($component['name']) : $component['name'],
     '#title_display' => $component['extra']['title_display'] ? $component['extra']['title_display'] : 'before',
@@ -261,8 +265,8 @@ function _webform_render_govd_subscribe($component, $value = NULL, $filter = TRU
     _webform_shuffle_options($options);
   }
 
-  // Add default options if using a govd_subscribe list with no default. This matches
-  // Drupal 7's handling of govd_subscribe lists.
+  // Add default options if using a govd_subscribe list with no
+  // default. This matches Drupal 7's handling of govd_subscribe lists.
   if ($component['extra']['aslist'] && !$component['extra']['multiple'] && $default_value === '') {
     $options = array('' => ($component['mandatory'] ? t('- Select -') : t('- None -'))) + $options;
   }
@@ -350,11 +354,10 @@ function _webform_render_govd_subscribe($component, $value = NULL, $filter = TRU
     }
   }
   return $element;
-
 }
 
 /**
- * Process function to ensure govd_subscribe_or_other elements validate properly.
+ * Ensure govd_subscribe_or_other elements validate properly.
  */
 function webform_expand_govd_subscribe_or_other($element) {
   // Disable validation for back-button and save draft.
@@ -364,21 +367,23 @@ function webform_expand_govd_subscribe_or_other($element) {
   $element['other']['#validated'] = TRUE;
   $element['other']['#webform_validated'] = FALSE;
 
-  // If the default value contains "govd_subscribe_or_other" (the key of the govd_subscribe
-  // element for the "other..." choice), discard it and set the "other" value.
+  // If the default value contains "govd_subscribe_or_other" (the key of
+  // the govd_subscribe element for the "other..." choice), discard it and
+  // set the "other" value.
   if (is_array($element['#default_value']) && in_array('govd_subscribe_or_other', $element['#default_value'])) {
     $key = array_search('govd_subscribe_or_other', $element['#default_value']);
     unset($element['#default_value'][$key]);
     $element['#default_value'] = array_values($element['#default_value']);
     $element['other']['#default_value'] = implode(', ', $element['#default_value']);
   }
-
   return $element;
 }
 
 /**
- * Drupal 6ism that properly *renders* checkboxes in multistep forms. This is
- * different than the value code needed in Drupal 5, which is no longer needed.
+ * Drupal 6ism that properly *renders* checkboxes in multistep forms.
+ *
+ * This is different than the value code needed in Drupal 5, which is no
+ * longer needed.
  */
 function govd_subscribe_expand_checkboxes($element) {
   // Elements that have a value set are already in the form structure cause
@@ -435,7 +440,8 @@ function govd_subscribe_checkbox_prerender($element) {
 function govd_subscribe_checkbox_value($form, $edit = FALSE) {
   if ($edit !== FALSE) {
     if (empty($form['#disabled'])) {
-      return $edit !== NULL ? $form['#return_value'] : NULL; // 0 in core.
+      // 0 in core.
+      return $edit !== NULL ? $form['#return_value'] : NULL;
     }
     else {
       return $form['#default_value'];
@@ -501,7 +507,8 @@ function _webform_submit_govd_subscribe($component, $value) {
         }
       }
       // Handle options that are added through the "other" field. Specifically
-      // exclude the "govd_subscribe_or_other" value, which is added by the govd_subscribe list.
+      // exclude the "govd_subscribe_or_other" value, which is added by
+      // the govd_subscribe list.
       elseif ($component['extra']['other_option'] && module_exists('govd_subscribe_or_other') && $option_value != 'govd_subscribe_or_other') {
         $return[] = $option_value;
       }
@@ -510,7 +517,6 @@ function _webform_submit_govd_subscribe($component, $value) {
   elseif (is_string($value)) {
     $return = $value;
   }
-
   return $return;
 }
 
@@ -518,7 +524,8 @@ function _webform_submit_govd_subscribe($component, $value) {
  * Format the text output for this component.
  */
 function theme_webform_display_govd_subscribe($element) {
-  // TODO: Should this theme webform_display_govd_subscribe be declared in hook_theme()?
+  // TODO: Should this theme webform_display_govd_subscribe be declared in
+  // hook_theme()?
   $component = $element['#webform_component'];
 
   // Convert submitted 'safe' values to un-edited, original form.
@@ -566,7 +573,6 @@ function theme_webform_display_govd_subscribe($element) {
       $output = isset($items[0]) ? $items[0] : ' ';
     }
   }
-
   return $output;
 }
 
@@ -583,18 +589,12 @@ function _webform_analysis_govd_subscribe($component, $sids = array(), $single =
   $option_operator = $show_other_results ? 'NOT IN' : 'IN';
   $placeholders = count($options) ? array_fill(0, count($options), "'%s'") : array();
   $query = 'SELECT data, count(data) as datacount ' .
-    ' FROM {webform_submitted_data} ' .
-    ' WHERE nid = %d ' .
-    ' AND cid = %d ' .
-    " AND data != ''" . $sid_filter .
+    " FROM {webform_submitted_data} WHERE nid = %d AND cid = %d AND data != ''" . $sid_filter .
     ($placeholders ? ' AND data ' . $option_operator . ' (' . implode(',', $placeholders) . ')' : '') .
     ' GROUP BY data ';
 
   $count_query = 'SELECT count(*) as datacount ' .
-    ' FROM {webform_submitted_data} ' .
-    ' WHERE nid = %d ' .
-    ' AND cid = %d ' .
-    " AND data != ''" . $sid_filter;
+    "FROM {webform_submitted_data} WHERE nid = %d AND cid = %d AND data != ''" . $sid_filter;
 
   // TODO Please convert this statement to the D7 database API syntax.
   $result = db_query($query, array_merge(array($component['nid'], $component['cid']), $sids, array_keys($options)));
@@ -625,7 +625,6 @@ function _webform_analysis_govd_subscribe($component, $sids = array(), $single =
 
     $rows = $ordered_rows;
   }
-
   return $rows;
 }
 
@@ -649,7 +648,6 @@ function _webform_table_govd_subscribe($component, $value) {
       }
     }
   }
-
   return implode('<br />', $items);
 }
 
@@ -763,7 +761,6 @@ function webform_govd_subscribe_options_ajax($source_name = '') {
   drupal_json_output($return);
 }
 
-
 /**
  * Generate a list of options for a govd_subscribe list.
  */
@@ -801,13 +798,13 @@ function _webform_govd_subscribe_options_info() {
 /**
  * Execute a govd_subscribe option callback.
  *
- * @param $name
+ * @param string $name
  *   The name of the options group.
- * @param $component
+ * @param array $component
  *   The full Webform component.
- * @param $flat
+ * @param bool $flat
  *   Whether the information returned should exclude any nested groups.
- * @param $filter
+ * @param bool $filter
  *   Whether information returned should be sanitized. Defaults to TRUE.
  */
 function _webform_govd_subscribe_options_callback($name, $component, $flat = FALSE, $filter = TRUE) {
@@ -834,15 +831,19 @@ function _webform_govd_subscribe_options_callback($name, $component, $flat = FAL
 }
 
 /**
- * Utility function to split user-entered values from new-line seperated
- * text into an array of options.
+ * Utility function to split user-entered values.
  *
- * @param $text
+ * From new-line separated text into an array of options.
+ *
+ * @param string $text
  *   Text to be converted into a govd_subscribe option array.
- * @param $flat
+ * @param bool $flat
  *   Optional. If specified, return the option array and exclude any optgroups.
- * @param $filter
+ * @param bool $filter
  *   Optional. Whether or not to filter returned values.
+ *
+ * @return array
+ *   Options cache.
  */
 function _webform_govd_subscribe_options_from_text($text, $flat = FALSE, $filter = TRUE) {
   static $option_cache = array();
@@ -858,15 +859,13 @@ function _webform_govd_subscribe_options_from_text($text, $flat = FALSE, $filter
     $group = NULL;
     foreach ($rows as $option) {
       $option = trim($option);
-      /**
-       * If the Key of the option is within < >, treat as an optgroup
-       *
-       * <Group 1>
-       *   creates an optgroup with the label "Group 1"
-       *
-       * <>
-       *   Unsets the current group, allowing items to be inserted at the root element.
-       */
+
+      // If the Key of the option is within < >, treat as an optgroup
+      // <Group 1>
+      // creates an optgroup with the label "Group 1"
+      // <>
+      // Unsets the current group, allowing items to be inserted at the
+      // root element.
       if (preg_match('/^\<([^>]*)\>$/', $option, $matches)) {
         if (empty($matches[1])) {
           unset($group);
@@ -892,7 +891,6 @@ function _webform_govd_subscribe_options_from_text($text, $flat = FALSE, $filter
   // Return our options from the option_cache array.
   return $option_cache[$flat][$md5];
 }
-
 
 /**
  * Convert an array of options into text.

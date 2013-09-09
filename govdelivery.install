@@ -2,19 +2,10 @@
 /**
  * @file
  * Install, update and uninstall functions for the govdelivery module.
- *
  */
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
-function govdelivery_install() {
-}
-
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Uninstallation.
  */
 function govdelivery_uninstall() {
   $mail_system = variable_get('mail_system');
@@ -27,8 +18,7 @@ function govdelivery_uninstall() {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Implements hook_schema().
  *
  * @todo Fix Indexes.
  */
@@ -43,25 +33,25 @@ function govdelivery_schema() {
     'initial' => 1,
   );
 
-  // Base table definition
+  // Base table definition.
   $schema_system_cache = drupal_get_schema_unprocessed('system', 'cache');
 
-  // Message Queue
+  // Message Queue.
   $schema['govdelivery_message_queue'] = $schema_system_cache;
   $schema['govdelivery_message_queue']['fields']['bid'] = $bin;
   $schema['govdelivery_message_queue']['indexes']['bid'] = array('bid');
 
-  // Subscription Queue
+  // Subscription Queue.
   $schema['govdelivery_subscription_queue'] = $schema_system_cache;
   $schema['govdelivery_subscription_queue']['fields']['bid'] = $bin;
   $schema['govdelivery_subscription_queue']['indexes']['bid'] = array('bid');
 
-  // Subscriber API Topic Queue
+  // Subscriber API Topic Queue.
   $schema['govdelivery_subscriber_api_topic_queue'] = $schema_system_cache;
   $schema['govdelivery_subscriber_api_topic_queue']['fields']['bid'] = $bin;
   $schema['govdelivery_subscriber_api_topic_queue']['indexes']['bid'] = array('bid');
 
-  // Subscriber API Subscriber Queue
+  // Subscriber API Subscriber Queue.
   $schema['govdelivery_subscriber_api_subscriber_queue'] = $schema_system_cache;
   $schema['govdelivery_subscriber_api_subscriber_queue']['fields']['bid'] = $bin;
   $schema['govdelivery_subscriber_api_subscriber_queue']['indexes']['bid'] = array('bid');
@@ -69,6 +59,9 @@ function govdelivery_schema() {
   return $schema;
 }
 
+/**
+ * Installation update.
+ */
 function govdelivery_update_7011() {
   $topic_table = drupal_get_schema_unprocessed('system', 'cache');
   $subscriber_table = drupal_get_schema_unprocessed('system', 'cache');
@@ -80,6 +73,9 @@ function govdelivery_update_7011() {
   db_create_table('govdelivery_subscriber_api_subscriber_queue', $subscriber_table);
 }
 
+/**
+ * Installation update.
+ */
 function govdelivery_update_7015() {
   $schema = drupal_get_schema('govdelivery_message_queue', TRUE);
   db_add_field('govdelivery_message_queue', 'bid', $schema['fields']['bid']);
@@ -93,6 +89,9 @@ function govdelivery_update_7015() {
   db_add_index('govdelivery_subscriber_api_subscriber_queue', 'bid', array('bid'));
 }
 
+/**
+ * Installation update.
+ */
 function govdelivery_update_7020() {
   variable_set('govdelivery_messages_nagios_critical_threshold',
                variable_get('govdelivery_nagios_critical_threshold', 750));
