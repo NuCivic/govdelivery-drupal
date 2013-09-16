@@ -92,6 +92,11 @@ function govdelivery_settings($form, &$form_state) {
         '#title' => 'Server',
         '#default_value' => (!empty($govdelivery_odm_settings['server']) ? check_url($govdelivery_odm_settings['server']) : ''),
       ),
+      'auth_token' => array(
+        '#type' => "textfield",
+        '#title' => t('Auth token for ODM service'),
+        '#default_value' => (!empty($govdelivery_odm_settings['auth_token']) ? $govdelivery_odm_settings['auth_token'] : ''),
+      ),
       'enabled' => array(
         '#type' => 'radios',
         '#default_value' => (isset($govdelivery_odm_settings['enabled']) ? $govdelivery_odm_settings['enabled'] : 0),
@@ -188,6 +193,9 @@ function govdelivery_settings_submit($form, $postinfo) {
   // Server.
   $server = $postinfo['values']['govdelivery_odm_settings']['server'];
   $govdelivery_odm_settings['server'] = check_url($server);
+
+  // REST auth token.
+  $govdelivery_odm_settings['auth_token'] = $postinfo['values']['govdelivery_odm_settings']['auth_token'];
 
   // Subscription URL.
   $service_url = $postinfo['values']['govdelivery_subscription_settings']['service_url'];

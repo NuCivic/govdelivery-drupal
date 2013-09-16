@@ -90,13 +90,14 @@ function govdelivery_mail($key, &$message, $params) {
     }
   }
 
-  $message['body'][] = chr(0xb);
-  // Low level ctrl chars.
-  $message['body'][] = chr(0x10);
-  // Block D7FF < chr < E000
-  $message['body'][] = chr(0x800);
-  // Block FFFD < chr < 10000
-  $message['body'][] = chr(0xFFFE);
+  // Commenting out as it is causing problems sending body.
+  // $message['body'][] = chr(0xb);
+  // // Low level ctrl chars.
+  // $message['body'][] = chr(0x10);
+  // // Block D7FF < chr < E000
+  // $message['body'][] = chr(0x800);
+  // // Block FFFD < chr < 10000
+  // $message['body'][] = chr(0xFFFE);
   $message['body'][] = "<html>";
   $message['body'][] = "<h1>H1 Test</h1>";
   $message['body'][] = "<h2>H2 Test</h2>";
@@ -706,14 +707,11 @@ function govdelivery_send_message($message) {
   # Check which account is mapped.
   $account_map = variable_get("govdelivery_account_map", NULL);
   $account = (isset($account_map[$message['id']]) ? $account_map[$message['id']] : $account_map['default']);
-  // if (!isset($account) || empty($account)) {
-  //   watchdog('govdelivery', 'No default account specified.  Check settings.php.', NULL, WATCHDOG_ERROR);
-  //   return FALSE;
-  // }
+  if (!isset($account) || empty($account)) {
+    watchdog('govdelivery', 'No default account specified.  Check settings.php.', NULL, WATCHDOG_ERROR);
+    return FALSE;
+  }
 
-  $account = 'developer';
-
-  // @todo Allowing overriding the from address.
   $from_address = $govdelivery_odm_settings['accounts'][$account]['fromname'];
   if (isset($govdelivery_odm_settings['override_from']) && !empty($govdelivery_odm_settings['override_from'])) {
     if (!empty($message['from'])) {
@@ -731,16 +729,16 @@ function govdelivery_send_message($message) {
     $message_data['recipients'][] = array('email' => $recipient);
   }
   $data = json_encode($message_data);
+  $auth_token = $govdelivery_odm_settings['auth_token'];
   $options = array(
     'method' => 'POST',
     'data' => $data,
     'timeout' => 15,
-    'headers' => array('Content-Type' => 'application/json'),
+    'headers' => array('Content-Type' => 'application/json', 'X-AUTH-TOKEN' => $auth_token),
   );
 
   $server = $govdelivery_odm_settings['server'];
   $result = drupal_http_request($server . '/messages/email', $options);
-
   // HTTP code for this?
   if ($result->code == 200) {
     $send_success = TRUE;
