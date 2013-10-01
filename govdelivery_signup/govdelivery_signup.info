@@ -1,0 +1,6 @@
+name = GovDelivery signup form
+description = Installable GovDelivery Sign up form
+package = GovDelivery
+core = 6.x
+files[] = govdelivery_signup.module
+files[] = govdelivery_signup.admin.inc

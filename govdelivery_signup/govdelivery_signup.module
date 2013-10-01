@@ -1,0 +1,138 @@
+<?php
+/**
+ * @file
+ * GovDelivery Signup Module
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function govdelivery_signup_menu() {
+  $items = array();
+  $items['admin/settings/govdelivery'] = array(
+    'title' => 'GovDelivery',
+    'description' => 'Configure GovDelivery settings.',
+    'position' => 'right',
+    'weight' => 0,
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('access administration pages'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+  $items['admin/settings/govdelivery/signup'] = array(
+    'title' => 'GovDelivery signup',
+    'description' => 'Configure GovDelivery signup settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('govdelivery_signup_admin_settings'),
+    'file' => 'govdelivery_signup.admin.inc',
+    'access arguments' => array('access administration pages'),
+    'weight' => 0,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function govdelivery_signup_block($op = 'list', $delta = 0, $edit = array()) {
+  if ($op == 'list') {
+    $blocks = array();
+    $blocks[0]['info'] = t('GovDelivery signup form');
+    return $blocks;
+  }
+  else if ($op == 'view') {
+    switch ($delta) {
+      case 0:
+        // Your module will need to define this function to render the block.
+        $block['subject'] = '';
+        $block['content'] = govdelivery_signup_displayform();
+        return $block;
+    }
+  }
+}
+
+/**
+ * Displays the signup form on the webpage.
+ */
+function govdelivery_signup_displayform() {
+  return drupal_get_form('govdelivery_signup_blockform');
+}
+
+/**
+ * Builds the form array for the signup form.
+ */
+function govdelivery_signup_blockform($form) {
+  $form = array();
+  $form['govdelivery_signup'] = array(
+    '#type' => 'fieldset',
+    '#title' => t(variable_get('govdelivery_signup_fieldsetdesc', '')),
+    '#description' => t(variable_get('govdelivery_signup_description', '')),
+    '#collapsible' => FALSE,
+    '#hidefieldsets' => TRUE,
+  );
+  $form['govdelivery_signup']['email'] = array(
+    '#type' => 'textfield',
+    '#title' => t(variable_get('govdelivery_signup_emaillabel', '')),
+    '#default_value' => t(variable_get('govdelivery_signup_emailvalue', '')),
+    '#description' => t(variable_get('govdelivery_signup_emaildesc', '')),
+    '#maxlength' => 250,
+    '#size' => 25,
+    '#required' => TRUE,
+  );
+  $form['govdelivery_signup']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t(variable_get('govdelivery_signup_buttonlabel', '')),
+  );
+  $form['#validate'] = array('govdelivery_signup_blockform_validate');
+  return $form;
+}
+
+/**
+ * This opens up the Quick Subscribe Page.
+ *
+ * For the Account based on the configuration settings.
+ */
+function govdelivery_signup_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'govdelivery_signup_blockform') {
+    $form['#submit'][] = 'govdelivery_signup_submit';
+  }
+}
+
+/**
+ * This opens up the Quick Subscribe Page.
+ *
+ * For the account based on the configuration settings.
+ */
+function govdelivery_signup_submit($form, &$form_state) {
+  $email = $form_state['values']['email'];
+  $govdelivery_signup_server = variable_get('govdelivery_signup_server', '');
+  $govdelivery_signup_clientcode = variable_get('govdelivery_signup_clientcode', '');
+  $form_state['redirect'] = array($govdelivery_signup_server . '/accounts/' . $govdelivery_signup_clientcode . '/subscribers/qualify?email=' . $email);
+}
+
+/**
+ * This applies a theme to the module.
+ */
+function govdelivery_signup_theme() {
+  $path = drupal_get_path('module', 'govdelivery_signup') . '/theme';
+  return array(
+    'govdelivery_signup_displayform' => array(
+      'render element' => 'form',
+      'template' => 'govdelivery_signup-displayform',
+      'path' => $path,
+    ),
+  );
+}
+
+/**
+ * This validates the email address entered by the user.
+ */
+function govdelivery_signup_blockform_validate($form, &$form_state) {
+  $email = $form_state['values']['email'];
+  if (drupal_strlen($email) < 1) {
+    form_set_error('email', t('Please provide your e-mail address.'));
+  }
+  elseif (! preg_match("/^[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.([a-zA-Z]{2,4})$/", $email)) {
+    form_set_error('email', t('That is not a valid e-mail address.'));
+  }
+}

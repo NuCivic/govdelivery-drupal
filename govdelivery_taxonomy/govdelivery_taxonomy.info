@@ -1,0 +1,8 @@
+name = "GovDelivery taxonomy integration"
+description = "Create topics in GovDelivery for taxonomy terms"
+package = GovDelivery
+core = 6.x
+files[] = govdelivery_taxonomy.module
+files[] = govdelivery_taxonomy.admin.inc
+dependencies[] = taxonomy
+
