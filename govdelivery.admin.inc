@@ -76,10 +76,21 @@ function govdelivery_settings() {
       '#title' => t('Mail server settings'),
       '#tree' => TRUE,
       'accounts' => $account_fieldset,
+      'default_username' => array(
+        '#type' => "textfield",
+        '#title' => 'Default mail username',
+        '#default_value' => (!empty($govdelivery_odm_settings['default_username']) ? check_url($govdelivery_odm_settings['default_username']) : ''),
+        '#description' => t('The username of the default mail account to use.'),
+      ),
       'server' => array(
         '#type' => "textfield",
         '#title' => 'Server',
         '#default_value' => $govdelivery_odm_settings['server'],
+      ),
+      'auth_token' => array(
+        '#type' => "textfield",
+        '#title' => t('Auth token for ODM service'),
+        '#default_value' => (!empty($govdelivery_odm_settings['auth_token']) ? $govdelivery_odm_settings['auth_token'] : ''),
       ),
       'enabled' => array(
         '#type' => 'radios',

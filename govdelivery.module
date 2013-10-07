@@ -386,33 +386,11 @@ function govdelivery_send_message($message) {
   $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
   $sendsuccess = TRUE;
 
-  if (class_exists('SoapClient')) {
-    include_once 'odmService.php';
-    $email = new odmService($govdelivery_odm_settings['server']);
-    $odm_message = new ODM_message();
-
-    // Basically this is saying that a to list can be either an array
-    // or a comma separated values list.
-    // If it is an array each array item may still be a command separated list
-    // So we need to parse the comma separated list of each array element.
-    // If it is not initially an array then we need to check for a
-    // comma separated list only once and then proceed.
-    // Its really weird but its possible.
-    $recipients = array();
-    if (is_array($message["to"])) {
-      foreach ($message["to"] as $address) {
-        $tolist = explode(',', $address);
-        if (is_array($tolist)) {
-          $filtered_list = array_map("govdelivery_filter_email", $tolist);
-          $recipients = array_merge($recipients, $filtered_list);
-        }
-        else {
-          $recipients[] = govdelivery_filter_email($tolist);
-        }
-      }
-    }
-    else {
-      $tolist = explode(',', $message["to"]);
+  # Get list of recipients.
+  $recipients = array();
+  if (is_array($message["to"])) {
+    foreach ($message["to"] as $address) {
+      $tolist = explode(',', $address);
       if (is_array($tolist)) {
         $filtered_list = array_map("govdelivery_filter_email", $tolist);
         $recipients = array_merge($recipients, $filtered_list);
@@ -421,61 +399,54 @@ function govdelivery_send_message($message) {
         $recipients[] = govdelivery_filter_email($tolist);
       }
     }
-
-    $odm_message->to = (array) $recipients;
-    $account_map = variable_get("govdelivery_account_map", NULL);
-
-    if (isset($account_map)) {
-      $account = $account_map[$message["id"]];
-      if (!isset($account)) {
-        $account = $account_map["default"];
-        if (!isset($account)) {
-          watchdog('govdelivery', 'No default account specified.  Check settings.php.', NULL, WATCHDOG_ERROR);
-          return FALSE;
-        }
-      }
-
-      $odm_message->fromName = $govdelivery_odm_settings['accounts'][$account]['fromname'];
-      $odm_message->userName = $account;
-      $odm_message->password = $govdelivery_odm_settings['accounts'][$account]['password'];
-    }
-    else {
-      watchdog('govdelivery', 'GovDelivery account mapping has not been set.  Check settings.php.', NULL, WATCHDOG_ERROR);
-      return FALSE;
-    }
-
-    // Check for XML/XHTML or oldstyle HTML.
-    $xml_start = strpos(trim($message["body"]), "<?xml");
-    $html_start = strpos(trim($message["body"]), "<html");
-
-    // GovDelivery doesn't let us set the MIME type, it will send as
-    // text/html ... wrap with <pre> to allow for clean formatting if
-    // message isn't XML or HTML already.
-    if ($xml_start === 0 && $html_start === 0) {
-      $odm_message->body = $message["body"];
-    }
-    else {
-      $odm_message->body = '<pre>' . $message["body"] . '</pre>';
-    }
-    $odm_message->subject = $message["subject"];
-    $odm_message->recordDesignator = "email";
-    $odm_message->emailColumn = "email";
-
-    $status = $email->sendMessage($odm_message);
-    if ($status) {
-      // 0 is successfull !0 is fail.
-      $sendsuccess = !$status[0];
-    }
-    else {
-      $sendsuccess = FALSE;
-    }
   }
   else {
-    $sendsuccess = FALSE;
+    $tolist = explode(',', $message["to"]);
+    if (is_array($tolist)) {
+      $filtered_list = array_map("govdelivery_filter_email", $tolist);
+      $recipients = array_merge($recipients, $filtered_list);
+    }
+    else {
+      $recipients[] = govdelivery_filter_email($tolist);
+    }
   }
 
-  if (!$sendsuccess) {
-    watchdog('govdelivery', 'The soap client failed to send a message. It will be queued for resend on the next cron run', NULL, WATCHDOG_WARNING);
+  # Check which account is mapped.
+  $account = $govdelivery_odm_settings['default_username'];
+  if (!isset($account) || empty($account)) {
+    watchdog('govdelivery', "No default account specified.  Check 'Default mail username' in admin/settings/govdelivery.", NULL, WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  $from_address = $govdelivery_odm_settings['accounts'][$account]['fromname'];
+  if (isset($govdelivery_odm_settings['override_from']) && !empty($govdelivery_odm_settings['override_from'])) {
+    if (!empty($message['from'])) {
+      $from_address = $message['from'];
+    }
+  }
+
+  $message_data = array(
+    'body' => $message['body'],
+    'from_name' => $from_address,
+    'subject' => $message["subject"],
+    'recipients' => array()
+  );
+  foreach ($recipients as $recipient) {
+    $message_data['recipients'][] = array('email' => $recipient);
+  }
+  $data = json_encode($message_data);
+  $auth_token = $govdelivery_odm_settings['auth_token'];
+  $headers = array('Content-Type' => 'application/json', 'X-AUTH-TOKEN' => $auth_token);
+
+  $server = $govdelivery_odm_settings['server'];
+  $result = drupal_http_request($server . '/messages/email', $headers, 'POST', $data);
+  // HTTP code for this?
+  if ($result->code == 200 or $result->code == 201) {
+    $send_success = TRUE;
+  }
+  else {
+    watchdog('govdelivery', 'Exception: Error in sending email: %error', array('%error' => $result->code), WATCHDOG_ERROR);
+    $sendsuccess = FALSE;
   }
 
   return $sendsuccess;
