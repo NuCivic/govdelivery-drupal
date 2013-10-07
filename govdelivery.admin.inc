@@ -87,6 +87,12 @@ function govdelivery_settings($form, &$form_state) {
       '#title' => t('Mail server settings'),
       '#tree' => TRUE,
       'accounts' => $account_fieldset,
+      'default_username' => array(
+        '#type' => "textfield",
+        '#title' => 'Default mail username',
+        '#default_value' => (!empty($govdelivery_odm_settings['default_username']) ? check_url($govdelivery_odm_settings['default_username']) : ''),
+        '#description' => t('The username of the default mail account to use.'),
+      ),
       'server' => array(
         '#type' => "textfield",
         '#title' => 'Server',
@@ -189,6 +195,9 @@ function govdelivery_settings_submit($form, $postinfo) {
     );
   }
   $govdelivery_odm_settings['accounts'] = $account_settings;
+
+  // Default username for mail accounts.
+  $govdelivery_odm_settings['default_username'] = $postinfo['values']['govdelivery_odm_settings']['default_username'];
 
   // Server.
   $server = $postinfo['values']['govdelivery_odm_settings']['server'];

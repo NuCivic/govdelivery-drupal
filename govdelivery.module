@@ -705,10 +705,9 @@ function govdelivery_send_message($message) {
   }
 
   # Check which account is mapped.
-  $account_map = variable_get("govdelivery_account_map", NULL);
-  $account = (isset($account_map[$message['id']]) ? $account_map[$message['id']] : $account_map['default']);
+  $account = $govdelivery_odm_settings['default_username'];
   if (!isset($account) || empty($account)) {
-    watchdog('govdelivery', 'No default account specified.  Check settings.php.', NULL, WATCHDOG_ERROR);
+    watchdog('govdelivery', "No default account specified.  Check 'Default mail username' in admin/config/govdelivery/settings.", NULL, WATCHDOG_ERROR);
     return FALSE;
   }
 
