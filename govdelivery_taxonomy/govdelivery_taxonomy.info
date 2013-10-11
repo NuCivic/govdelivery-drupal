@@ -1,5 +1,5 @@
-name = GovDelivery taxonomy integration
-description = Create topics in GovDelivery for taxonomy terms.
+name = GovDelivery Taxonomy Integration
+description = Automatically creates topics in GovDelivery DCM for taxonomy terms.
 package = GovDelivery
 core = 7.x
 

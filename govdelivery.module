@@ -31,7 +31,7 @@ function govdelivery_menu() {
     'file path' => drupal_get_path('module', 'system'),
   );
   $items['admin/config/govdelivery/settings'] = array(
-    'title' => 'GovDelivery settings',
+    'title' => 'GovDelivery Integration',
     'description' => 'Settings for GovDelivery to connect with the GovDelivery TMS and Subscription service.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('govdelivery_settings'),
