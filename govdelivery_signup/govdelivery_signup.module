@@ -20,8 +20,8 @@ function govdelivery_signup_menu() {
     'file path' => drupal_get_path('module', 'system'),
   );
   $items['admin/settings/govdelivery/signup'] = array(
-    'title' => 'GovDelivery signup',
-    'description' => 'Configure GovDelivery signup settings.',
+    'title' => 'GovDelivery Signup',
+    'description' => 'Configure GovDelivery Signup settings.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('govdelivery_signup_admin_settings'),
     'file' => 'govdelivery_signup.admin.inc',

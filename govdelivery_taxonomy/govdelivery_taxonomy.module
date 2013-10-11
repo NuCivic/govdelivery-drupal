@@ -20,8 +20,8 @@ function govdelivery_taxonomy_menu() {
     'file path' => drupal_get_path('module', 'system'),
   );
   $items['admin/settings/govdelivery/taxonomy'] = array(
-    'title' => 'GovDelivery taxonomy',
-    'description' => 'Configure GovDelivery taxonomy settings.',
+    'title' => 'GovDelivery Taxonomy',
+    'description' => 'Configure GovDelivery Taxonomy settings.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('govdelivery_taxonomy_admin'),
     'file' => 'govdelivery_taxonomy.admin.inc',
