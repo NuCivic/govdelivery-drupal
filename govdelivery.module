@@ -739,100 +739,14 @@ function govdelivery_send_message($message) {
   $server = $govdelivery_tms_settings['server'];
   $result = drupal_http_request($server . '/messages/email', $options);
   // HTTP code for this?
-  if ($result->code == 200) {
+  if ($result->code == 200 or $result->code == 201) {
     $send_success = TRUE;
   }
   else {
     watchdog('govdelivery', 'Exception: Error in sending email: %error', array('%error' => $result->code), WATCHDOG_ERROR);
+    $sendsuccess = FALSE;
   }
 
-  // ------------------------------------------------------------------
-
-  if (FALSE and class_exists('SoapClient')) {
-    $tms_message = new TMSMessage();
-
-    // Basically this is saying that a to list can be either an array
-    // or a comma seperated values list.
-    // If it is an array each array item may still be a comma separated list
-    // So we need to parse the comma separated list of each array element.
-    // If it is not initially an array then we need to check for a comma
-    // separated list only once and then proceede.
-    // Its really weird but its possible.
-    $recipients = array();
-    if (is_array($message["to"])) {
-      foreach ($message["to"] as $address) {
-        $tolist = explode(',', $address);
-        if (is_array($tolist)) {
-          $filtered_list = array_map("govdelivery_filter_email", $tolist);
-          $recipients = array_merge($recipients, $filtered_list);
-        }
-        else {
-          $recipients[] = govdelivery_filter_email($tolist);
-        }
-      }
-    }
-    else {
-      $tolist = explode(',', $message["to"]);
-      if (is_array($tolist)) {
-        $filtered_list = array_map("govdelivery_filter_email", $tolist);
-        $recipients = array_merge($recipients, $filtered_list);
-      }
-      else {
-        $recipients[] = govdelivery_filter_email($tolist);
-      }
-    }
-
-    $tms_message->to = (array) $recipients;
-
-    // Check account mappings from the settings file.
-    // @todo fix this so that a checkbox can select the default account
-    // in the admin area.
-    $account_map = variable_get("govdelivery_account_map", NULL);
-    $account = (isset($account_map[$message['id']]) ? $account_map[$message['id']] : $account_map['default']);
-    if (!isset($account) || empty($account)) {
-      watchdog('govdelivery', 'No default account specified.  Check settings.php.', NULL, WATCHDOG_ERROR);
-      return FALSE;
-    }
-
-    // @todo Allowing overriding the from address.
-    $from_address = $govdelivery_tms_settings['accounts'][$account]['fromname'];
-    if (isset($govdelivery_tms_settings['override_from']) && !empty($govdelivery_tms_settings['override_from'])) {
-      if (!empty($message['from'])) {
-        $from_address = $message['from'];
-      }
-    }
-
-    $tms_message->setFromName($from_address);
-    $tms_message->setSubject($message["subject"]);
-    $tms_message->setBody($message['body']);
-    $tms_message->trackClicks = FALSE;
-    $tms_message->trackOpens = FALSE;
-
-    try {
-      $credentials = new TMSCredentials($account, $govdelivery_tms_settings['accounts'][$account]['password']);
-      $tms = new tmsService($govdelivery_tms_settings['server'], $credentials);
-      $status = $tms->sendMessage($tms_message);
-
-      if (isset($status) && is_string($status)) {
-        $sendsuccess = TRUE;
-      }
-      else {
-        $sendsuccess = FALSE;
-      }
-    }
-    catch (SoapFault $e) {
-      if (isset($e->detail, $e->detail->TMSFault, $e->detail->TMSFault->category, $e->detail->TMSFault->detail)) {
-        watchdog('govdelivery', 'TMS Fault - Category: %category; Detail: %detail. Item will be queues for resend on the next cron run.',
-          array('%category' => $e->detail->TMSFault->category, '%detail' => $e->detail->TMSFault->detail), WATCHDOG_ERROR);
-      }
-      else {
-        watchdog('govdelivery', 'Soap Fault - Message: %message. Item will be queued for resend on the next cron run.', array('%message' => $e->getMessage()), WATCHDOG_ERROR);
-      }
-    }
-    catch (Exception $e) {
-      watchdog('govdelivery', 'Exception - Message: %message. Item will be queued for resend on the next cron run.', array('%message' => $e->getMessage()), WATCHDOG_ERROR);
-    }
-  }
   return $sendsuccess;
 }
 
