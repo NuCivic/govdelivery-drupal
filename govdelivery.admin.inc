@@ -16,7 +16,7 @@ function govdelivery_settings() {
 
   $account_fieldset = array(
     '#type' => 'fieldset',
-    '#title' => t('Mail accounts'),
+    '#title' => t('Mail account'),
   );
 
   if (isset($govdelivery_tms_settings) && isset($govdelivery_tms_settings['accounts']) && is_array($govdelivery_tms_settings['accounts'])) {
@@ -27,48 +27,53 @@ function govdelivery_settings() {
         '#default_value' => $account_settings['fromname'],
       );
       $account_fieldset[$username . '%###%username'] = array(
-        '#type' => "textfield",
+        '#type' => "hidden",
         '#title' => t('Username'),
-        '#default_value' => $username,
+        '#default_value' => t('gd_drupal_tms'),
       );
       $account_fieldset[$username . '%###%password'] = array(
-        '#type' => "textfield",
+        '#type' => "hidden",
         '#title' => t('Password'),
-        '#default_value' => $account_settings['password'],
+        '#default_value' => t('gd_drupal_tms'),
       );
     }
   }
+  else {
+    $account_fieldset['fromname'] = array(
+      '#type' => "textfield",
+      '#title' => t('From name'),
+      '#description' => t('The name displayed in the From field of the received email. E.G. John Smith.'),
+    );
+    $account_fieldset['username'] = array(
+      '#type' => "hidden",
+      '#title' => t('Username'),
+      '#value' => t('gd_drupal_tms'),
+    );
+    $account_fieldset['password'] = array(
+      '#type' => "hidden",
+      '#title' => t('Password'),
+      '#value' => t('gd_drupal_tms'),
+    );
+  }
 
-  $account_fieldset['fromname'] = array(
-    '#type' => "textfield",
-    '#title' => t('From name'),
-  );
-  $account_fieldset['username'] = array(
-    '#type' => "textfield",
-    '#title' => t('Username'),
-  );
-  $account_fieldset['password'] = array(
-    '#type' => "textfield",
-    '#title' => t('Password'),
-  );
-
-  $subscription_fieldset = array(
-    '#type' => 'fieldset',
-    '#title' => t('Subscription API'),
-    '#tree' => TRUE,
-  );
-  $subscription_fieldset['service_url'] = array(
-    '#type' => "textfield",
-    '#title' => t('URL for subscription service'),
-    '#default_value' => url($govdelivery_subscription_settings['service_url']),
-  );
-  $subscription_fieldset['cron_subscriptions'] = array(
-    '#type' => 'radios',
-    '#default_value' => (isset($govdelivery_subscription_settings['cron_subscriptions']) ? $govdelivery_subscription_settings['cron_subscriptions'] : 1),
-    '#title' => t('Subscriptions cron'),
-    '#options' => array('Disabled', 'Enabled'),
-    '#description' => t('Will automatically resend the subscriptions queue on cron runs.'),
-  );
+// Commenting out subscription form for now until usage is clearer.
+  // $subscription_fieldset = array(
+  //   '#type' => 'fieldset',
+  //   '#title' => t('Subscription API'),
+  //   '#tree' => TRUE,
+  // );
+  // $subscription_fieldset['service_url'] = array(
+  //   '#type' => "textfield",
+  //   '#title' => t('URL for subscription service'),
+  //   '#default_value' => url($govdelivery_subscription_settings['service_url']),
+  // );
+  // $subscription_fieldset['cron_subscriptions'] = array(
+  //   '#type' => 'radios',
+  //   '#default_value' => (isset($govdelivery_subscription_settings['cron_subscriptions']) ? $govdelivery_subscription_settings['cron_subscriptions'] : 1),
+  //   '#title' => t('Subscriptions cron'),
+  //   '#options' => array('Disabled', 'Enabled'),
+  //   '#description' => t('Will automatically resend the subscriptions queue on cron runs.'),
+  // );
 
   $form = array(
     'govdelivery_tms_settings' => array(
@@ -76,12 +81,12 @@ function govdelivery_settings() {
       '#title' => t('Mail server settings'),
       '#tree' => TRUE,
       'accounts' => $account_fieldset,
-      'default_username' => array(
-        '#type' => "textfield",
-        '#title' => 'Default mail username',
-        '#default_value' => (!empty($govdelivery_tms_settings['default_username']) ? check_url($govdelivery_tms_settings['default_username']) : ''),
-        '#description' => t('The username of the default mail account to use.'),
-      ),
+      // 'default_username' => array(
+      //   '#type' => "textfield",
+      //   '#title' => 'Default mail username',
+      //   '#default_value' => (!empty($govdelivery_odm_settings['default_username']) ? check_url($govdelivery_odm_settings['default_username']) : ''),
+      //   '#description' => t('The username of the default mail account to use.'),
+      // ),
       'server' => array(
         '#type' => "textfield",
         '#title' => 'Server',
@@ -145,7 +150,8 @@ function govdelivery_settings_submit($form, $postinfo) {
     if (isset($value) && !empty($value)) {
       $key_elements = explode('%###%', $composite_key);
       if (count($key_elements) == 2) {
-        $username = $key_elements[0];
+        // Hardcoded username
+        $username = 'gd_drupal_tms';
         $field = $key_elements[1];
 
         if (!isset($account_settings[$username]) && isset($username) && !empty($username)) {
@@ -170,7 +176,9 @@ function govdelivery_settings_submit($form, $postinfo) {
     );
   }
 
-  $govdelivery_tms_settings['accounts'] = $account_settings;
+  $govdelivery_odm_settings['accounts'] = $account_settings;
+  // Default username for mail accounts.
+  $govdelivery_tms_settings['default_username'] = 'gd_drupal_tms';
 
   // Server.
   variable_set('govdelivery_tms_settings', $govdelivery_tms_settings);
@@ -186,7 +194,7 @@ function govdelivery_settings_submit($form, $postinfo) {
 }
 
 /**
- * Send a test message to the specificed addresses.
+ * Send a test message to the specified addresses.
  *
  * @return array
  *   Form data.
