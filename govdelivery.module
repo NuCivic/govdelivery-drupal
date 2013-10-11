@@ -32,7 +32,7 @@ function govdelivery_menu() {
   );
   $items['admin/config/govdelivery/settings'] = array(
     'title' => 'GovDelivery settings',
-    'description' => 'Settings for GovDelivery to connect with the GovDelivery ODM and Subscription service.',
+    'description' => 'Settings for GovDelivery to connect with the GovDelivery TMS and Subscription service.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('govdelivery_settings'),
     'access arguments' => array('Manage GovDelivery settings'),
@@ -114,7 +114,7 @@ function govdelivery_mail($key, &$message, $params) {
  */
 function govdelivery_cron() {
   $govdelivery_subscription_settings = variable_get('govdelivery_subscription_settings', NULL);
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
 
   // If subscriptions cron is Enabled.
   if (isset($govdelivery_subscription_settings['cron_subscriptions']) && $govdelivery_subscription_settings['cron_subscriptions']) {
@@ -122,7 +122,7 @@ function govdelivery_cron() {
   }
 
   // If subscriptions cron is Enabled.
-  if (isset($govdelivery_odm_settings['cron_odm']) && $govdelivery_odm_settings['cron_odm']) {
+  if (isset($govdelivery_tms_settings['cron_tms']) && $govdelivery_tms_settings['cron_tms']) {
     $items_sent = govdelivery_process_message_queue();
   }
 }
@@ -290,7 +290,7 @@ function _govdelivery_preprocess_queue($queue, $callback, $items = NULL, $ignore
     }
   }
   catch (Exception $e) {
-    watchdog('govdelivery', "Failed to get proper bid for processing. Validate that govdelivery_odm_settings['max_bid'] variable has a valid integer value or the Drush command is called with a valid second parameter. Error: @error",
+    watchdog('govdelivery', "Failed to get proper bid for processing. Validate that govdelivery_tms_settings['max_bid'] variable has a valid integer value or the Drush command is called with a valid second parameter. Error: @error",
       array('@error' => $e->getMessage()), WATCHDOG_ERROR);
     return FALSE;
   }
@@ -307,7 +307,7 @@ function _govdelivery_preprocess_queue($queue, $callback, $items = NULL, $ignore
  * Handles randomizing the range so that semaphores are less likely to deadlock.
  */
 function _govdelivery_get_bids_from_bid($bid) {
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
 
   // Flag for errors.
   $return = TRUE;
@@ -318,7 +318,7 @@ function _govdelivery_get_bids_from_bid($bid) {
   }
   else {
     $bid_range[0] = 1;
-    $bid_range[1] = is_numeric($govdelivery_odm_settings['max_bid']) ? $govdelivery_odm_settings['max_bid'] : 5;
+    $bid_range[1] = is_numeric($govdelivery_tms_settings['max_bid']) ? $govdelivery_tms_settings['max_bid'] : 5;
   }
 
   $bids = array();
@@ -334,7 +334,7 @@ function _govdelivery_get_bids_from_bid($bid) {
 
   if (!$return) {
     throw new Exception(
-      "Invalid Bid Range or unable to Shuffle the bids. Check calling function or the govdelivery_odm_settings['max_bid'] variable.");
+      "Invalid Bid Range or unable to Shuffle the bids. Check calling function or the govdelivery_tms_settings['max_bid'] variable.");
   }
 
   return $bids;
@@ -344,7 +344,7 @@ function _govdelivery_get_bids_from_bid($bid) {
  * Generic thread-safe queue processor.
  */
 function govdelivery_process_queue($queue, $callback, $bid, $items = NULL, $ignore_max_time = FALSE, $cid = NULL) {
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
   $start_time = (timer_read('page') / 1000);
 
   // Get the lock name.
@@ -358,7 +358,7 @@ function govdelivery_process_queue($queue, $callback, $bid, $items = NULL, $igno
   }
 
   // Check if the lock is available or fail.
-  if (!lock_acquire($lock_name, $govdelivery_odm_settings['external_cron_interval'])) {
+  if (!lock_acquire($lock_name, $govdelivery_tms_settings['external_cron_interval'])) {
     watchdog('govdelivery', 'Attempting to re-run govdelivery queue processing while it is already running. @bin',
       array('@bin' => $lock_name), WATCHDOG_WARNING);
     return FALSE;
@@ -438,7 +438,7 @@ function govdelivery_queue_get($queue, $cid) {
  * Create or update an item in the queue.
  */
 function govdelivery_queue_set($queue, $cid, $data) {
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
 
   $serialized = 0;
   if (is_object($data) || is_array($data)) {
@@ -448,7 +448,7 @@ function govdelivery_queue_set($queue, $cid, $data) {
 
   $created = REQUEST_TIME;
   try {
-    $random = rand(1, $govdelivery_odm_settings['max_bid']);
+    $random = rand(1, $govdelivery_tms_settings['max_bid']);
     $query = db_update($queue);
     $query->fields(array(
         'data' => $data,
@@ -560,10 +560,10 @@ function govdelivery_filter_email($address) {
  */
 function govdelivery_process_message($key, $message) {
   // Check preferences.
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
   $send_success = FALSE;
   // Attempt to send immediately.
-  if (isset($govdelivery_odm_settings['queue']) && !$govdelivery_odm_settings['queue']) {
+  if (isset($govdelivery_tms_settings['queue']) && !$govdelivery_tms_settings['queue']) {
     $send_success = govdelivery_send_message($message);
     if ($send_success) {
       watchdog('govdelivery', 'Successfully sent a message immediately.', array(), WATCHDOG_INFO);
@@ -676,7 +676,7 @@ function govdelivery_subscriber_api_add_subscriber($email, $title = NULL, $topic
  * Also called to send immediately.
  */
 function govdelivery_send_message($message) {
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
   $sendsuccess = FALSE;
 
     # Get list of recipients.
@@ -705,14 +705,14 @@ function govdelivery_send_message($message) {
   }
 
   # Check which account is mapped.
-  $account = $govdelivery_odm_settings['default_username'];
+  $account = $govdelivery_tms_settings['default_username'];
   if (!isset($account) || empty($account)) {
     watchdog('govdelivery', "No default account specified.  Check 'Default mail username' in admin/config/govdelivery/settings.", NULL, WATCHDOG_ERROR);
     return FALSE;
   }
 
-  $from_address = $govdelivery_odm_settings['accounts'][$account]['fromname'];
-  if (isset($govdelivery_odm_settings['override_from']) && !empty($govdelivery_odm_settings['override_from'])) {
+  $from_address = $govdelivery_tms_settings['accounts'][$account]['fromname'];
+  if (isset($govdelivery_tms_settings['override_from']) && !empty($govdelivery_tms_settings['override_from'])) {
     if (!empty($message['from'])) {
       $from_address = $message['from'];
     }
@@ -728,7 +728,7 @@ function govdelivery_send_message($message) {
     $message_data['recipients'][] = array('email' => $recipient);
   }
   $data = json_encode($message_data);
-  $auth_token = $govdelivery_odm_settings['auth_token'];
+  $auth_token = $govdelivery_tms_settings['auth_token'];
   $options = array(
     'method' => 'POST',
     'data' => $data,
@@ -736,7 +736,7 @@ function govdelivery_send_message($message) {
     'headers' => array('Content-Type' => 'application/json', 'X-AUTH-TOKEN' => $auth_token),
   );
 
-  $server = $govdelivery_odm_settings['server'];
+  $server = $govdelivery_tms_settings['server'];
   $result = drupal_http_request($server . '/messages/email', $options);
   // HTTP code for this?
   if ($result->code == 200) {
@@ -749,7 +749,7 @@ function govdelivery_send_message($message) {
   // ------------------------------------------------------------------
 
   if (FALSE and class_exists('SoapClient')) {
-    $odm_message = new ODMMessage();
+    $tms_message = new TMSMessage();
 
     // Basically this is saying that a to list can be either an array
     // or a comma seperated values list.
@@ -782,7 +782,7 @@ function govdelivery_send_message($message) {
       }
     }
 
-    $odm_message->to = (array) $recipients;
+    $tms_message->to = (array) $recipients;
 
     // Check account mappings from the settings file.
     // @todo fix this so that a checkbox can select the default account
@@ -795,23 +795,23 @@ function govdelivery_send_message($message) {
     }
 
     // @todo Allowing overriding the from address.
-    $from_address = $govdelivery_odm_settings['accounts'][$account]['fromname'];
-    if (isset($govdelivery_odm_settings['override_from']) && !empty($govdelivery_odm_settings['override_from'])) {
+    $from_address = $govdelivery_tms_settings['accounts'][$account]['fromname'];
+    if (isset($govdelivery_tms_settings['override_from']) && !empty($govdelivery_tms_settings['override_from'])) {
       if (!empty($message['from'])) {
         $from_address = $message['from'];
       }
     }
 
-    $odm_message->setFromName($from_address);
-    $odm_message->setSubject($message["subject"]);
-    $odm_message->setBody($message['body']);
-    $odm_message->trackClicks = FALSE;
-    $odm_message->trackOpens = FALSE;
+    $tms_message->setFromName($from_address);
+    $tms_message->setSubject($message["subject"]);
+    $tms_message->setBody($message['body']);
+    $tms_message->trackClicks = FALSE;
+    $tms_message->trackOpens = FALSE;
 
     try {
-      $credentials = new ODMCredentials($account, $govdelivery_odm_settings['accounts'][$account]['password']);
-      $odm = new odmService($govdelivery_odm_settings['server'], $credentials);
-      $status = $odm->sendMessage($odm_message);
+      $credentials = new TMSCredentials($account, $govdelivery_tms_settings['accounts'][$account]['password']);
+      $tms = new tmsService($govdelivery_tms_settings['server'], $credentials);
+      $status = $tms->sendMessage($tms_message);
 
       if (isset($status) && is_string($status)) {
         $sendsuccess = TRUE;
@@ -821,9 +821,9 @@ function govdelivery_send_message($message) {
       }
     }
     catch (SoapFault $e) {
-      if (isset($e->detail, $e->detail->ODMFault, $e->detail->ODMFault->category, $e->detail->ODMFault->detail)) {
-        watchdog('govdelivery', 'ODM Fault - Category: %category; Detail: %detail. Item will be queues for resend on the next cron run.',
-          array('%category' => $e->detail->ODMFault->category, '%detail' => $e->detail->ODMFault->detail), WATCHDOG_ERROR);
+      if (isset($e->detail, $e->detail->TMSFault, $e->detail->TMSFault->category, $e->detail->TMSFault->detail)) {
+        watchdog('govdelivery', 'TMS Fault - Category: %category; Detail: %detail. Item will be queues for resend on the next cron run.',
+          array('%category' => $e->detail->TMSFault->category, '%detail' => $e->detail->TMSFault->detail), WATCHDOG_ERROR);
       }
       else {
         watchdog('govdelivery', 'Soap Fault - Message: %message. Item will be queued for resend on the next cron run.', array('%message' => $e->getMessage()), WATCHDOG_ERROR);
@@ -1000,8 +1000,8 @@ function govdelivery_subscriber_api_send_topic($data) {
   }
 
   // Check settings are available or fail.
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
-  if (empty($govdelivery_odm_settings)) {
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
+  if (empty($govdelivery_tms_settings)) {
     watchdog('govdelivery', 'No settings found. Check settings.php.', NULL, WATCHDOG_ERROR);
     return FALSE;
   }
@@ -1017,8 +1017,8 @@ function govdelivery_subscriber_api_send_topic($data) {
   }
 
   // Get the password parameter or fail.
-  if (isset($govdelivery_odm_settings['accounts'][$account]['password']) && !empty($govdelivery_odm_settings['accounts'][$account]['password'])) {
-    $password = $govdelivery_odm_settings['accounts'][$account]['password'];
+  if (isset($govdelivery_tms_settings['accounts'][$account]['password']) && !empty($govdelivery_tms_settings['accounts'][$account]['password'])) {
+    $password = $govdelivery_tms_settings['accounts'][$account]['password'];
   }
   else {
     watchdog('govdelivery', 'No password for default account. Check settings.php.', NULL, WATCHDOG_ERROR);

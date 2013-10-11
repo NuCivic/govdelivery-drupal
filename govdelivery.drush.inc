@@ -334,7 +334,7 @@ function govdelivery_drush_test_subscriber($email, $title = NULL, $topic_id = NU
  *   Sequence.
  */
 function govdelivery_drush_delivery_report($results = 100, $sequence = '') {
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
   $account_map = variable_get("govdelivery_account_map", NULL);
   $account = $account_map['default'];
   if (!isset($account) || empty($account)) {
@@ -342,11 +342,11 @@ function govdelivery_drush_delivery_report($results = 100, $sequence = '') {
     return FALSE;
   }
 
-  require_once 'odmService.php';
-  $credentials = new ODMCredentials($account, $govdelivery_odm_settings['accounts'][$account]['password']);
-  $service = new odmService($govdelivery_odm_settings['server'], $credentials);
+  require_once 'tmsService.php';
+  $credentials = new TMSCredentials($account, $govdelivery_tms_settings['accounts'][$account]['password']);
+  $service = new tmsService($govdelivery_tms_settings['server'], $credentials);
 
-  $activity = new ODMDeliveryActivitySince();
+  $activity = new TMSDeliveryActivitySince();
   $activity->maxResults = $results;
   $activity->sequence = $sequence;
   $result = $service->deliveryActivitySince($activity);

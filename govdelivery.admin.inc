@@ -12,7 +12,7 @@
  *   Form data.
  */
 function govdelivery_settings($form, &$form_state) {
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
   $govdelivery_subscription_settings = variable_get('govdelivery_subscription_settings', array());
 
   $account_fieldset = array(
@@ -20,8 +20,8 @@ function govdelivery_settings($form, &$form_state) {
     '#title' => t('Mail accounts'),
   );
 
-  if (isset($govdelivery_odm_settings) && isset($govdelivery_odm_settings['accounts']) && is_array($govdelivery_odm_settings['accounts'])) {
-    foreach ($govdelivery_odm_settings['accounts'] as $username => $account_settings) {
+  if (isset($govdelivery_tms_settings) && isset($govdelivery_tms_settings['accounts']) && is_array($govdelivery_tms_settings['accounts'])) {
+    foreach ($govdelivery_tms_settings['accounts'] as $username => $account_settings) {
       $account_fieldset[$username . '%###%fromname'] = array(
         '#type' => "textfield",
         '#title' => t('From name'),
@@ -82,7 +82,7 @@ function govdelivery_settings($form, &$form_state) {
   );
 
   $form = array(
-    'govdelivery_odm_settings' => array(
+    'govdelivery_tms_settings' => array(
       '#type' => 'fieldset',
       '#title' => t('Mail server settings'),
       '#tree' => TRUE,
@@ -90,45 +90,45 @@ function govdelivery_settings($form, &$form_state) {
       'default_username' => array(
         '#type' => "textfield",
         '#title' => 'Default mail username',
-        '#default_value' => (!empty($govdelivery_odm_settings['default_username']) ? check_url($govdelivery_odm_settings['default_username']) : ''),
+        '#default_value' => (!empty($govdelivery_tms_settings['default_username']) ? check_url($govdelivery_tms_settings['default_username']) : ''),
         '#description' => t('The username of the default mail account to use.'),
       ),
       'server' => array(
         '#type' => "textfield",
         '#title' => 'Server',
-        '#default_value' => (!empty($govdelivery_odm_settings['server']) ? check_url($govdelivery_odm_settings['server']) : ''),
+        '#default_value' => (!empty($govdelivery_tms_settings['server']) ? check_url($govdelivery_tms_settings['server']) : ''),
         '#description' => t('Enter the URL of your GovDelivery TMS instance. It must begin with "https." Example: https://yourserver.govdelivery.com'),
       ),
       'auth_token' => array(
         '#type' => "textfield",
         '#title' => t('Auth token'),
-        '#default_value' => (!empty($govdelivery_odm_settings['auth_token']) ? $govdelivery_odm_settings['auth_token'] : ''),
+        '#default_value' => (!empty($govdelivery_tms_settings['auth_token']) ? $govdelivery_tms_settings['auth_token'] : ''),
         '#description' => t('Enter the authentication token needed to send emails through your GovDelivery TMS service. If you do not have an authentication token, please content your GovDelivery account representative.'),
       ),
       'enabled' => array(
         '#type' => 'radios',
-        '#default_value' => (isset($govdelivery_odm_settings['enabled']) ? $govdelivery_odm_settings['enabled'] : 1),
+        '#default_value' => (isset($govdelivery_tms_settings['enabled']) ? $govdelivery_tms_settings['enabled'] : 1),
         '#title' => t('Use TMS for Outbound Mail'),
         '#options' => array('Disabled', 'Enabled'),
         '#description' => t('If this option is enabled, emails from your Drupal site will be sent using GovDelivery\'s Transactional Message Service (TMS). If it is disabled, emails we be sent using Drupal\'s standard SMTP-based email system.'),
       ),
       'queue' => array(
         '#type' => 'radios',
-        '#default_value' => (isset($govdelivery_odm_settings['queue']) ? $govdelivery_odm_settings['queue'] : 1),
+        '#default_value' => (isset($govdelivery_tms_settings['queue']) ? $govdelivery_tms_settings['queue'] : 1),
         '#title' => t('Queue Mail for High Volume'),
         '#options' => array('Disabled', 'Enabled'),
         '#description' => t('If this option is enabled, messages will be placed in a queue for delivery rather than be sent immediately. (Messages that fail to send will be queued anyway for later delivery.)'),
       ),
-      'cron_odm' => array(
+      'cron_tms' => array(
         '#type' => 'radios',
-        '#default_value' => (isset($govdelivery_odm_settings['cron_odm']) ? $govdelivery_odm_settings['cron_odm'] : 1),
+        '#default_value' => (isset($govdelivery_tms_settings['cron_tms']) ? $govdelivery_tms_settings['cron_tms'] : 1),
         '#title' => t('Messages cron'),
         '#options' => array('Disabled', 'Enabled'),
         '#description' => t('Will automatically resend the messages queue when cron runs.'),
       ),
       'override_from' => array(
         '#type' => 'radios',
-        '#default_value' => (isset($govdelivery_odm_settings['override_from']) ? $govdelivery_odm_settings['override_from'] : 0),
+        '#default_value' => (isset($govdelivery_tms_settings['override_from']) ? $govdelivery_tms_settings['override_from'] : 0),
         '#title' => t('Override the From address on outgoing messages and failback on the predefined From address in this module'),
         '#options' => array('Disabled', 'Enabled'),
         '#description' => t('This will allow webforms and other modules to configure the From address.'),
@@ -136,12 +136,12 @@ function govdelivery_settings($form, &$form_state) {
       'max_bid' => array(
         '#type' => 'textfield',
         '#title' => t('Maximum bins used with queue asynchronous processing'),
-        '#default_value' => (isset($govdelivery_odm_settings['max_bid']) ? $govdelivery_odm_settings['max_bid'] : 5),
+        '#default_value' => (isset($govdelivery_tms_settings['max_bid']) ? $govdelivery_tms_settings['max_bid'] : 5),
       ),
       'external_cron_interval' => array(
         '#type' => 'textfield',
         '#title' => t('External cron interval (in seconds)'),
-        '#default_value' => (isset($govdelivery_odm_settings['external_cron_interval']) ? $govdelivery_odm_settings['external_cron_interval'] : 120),
+        '#default_value' => (isset($govdelivery_tms_settings['external_cron_interval']) ? $govdelivery_tms_settings['external_cron_interval'] : 120),
       ),
     ),
     // Commenting out the GovDelivery subscription settings for now.
@@ -165,13 +165,13 @@ function govdelivery_settings($form, &$form_state) {
  *   POST info.
  */
 function govdelivery_settings_submit($form, $postinfo) {
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
   $govdelivery_subscription_settings = variable_get('govdelivery_subscription_settings', array());
-  $account_settings = isset($govdelivery_odm_settings['accounts']) ? $govdelivery_odm_settings['accounts'] : array();
+  $account_settings = isset($govdelivery_tms_settings['accounts']) ? $govdelivery_tms_settings['accounts'] : array();
   $new_account = array();
 
   // Change the account storage to an associative array indexed by username.
-  $accounts_posted = $postinfo['values']['govdelivery_odm_settings']['accounts'];
+  $accounts_posted = $postinfo['values']['govdelivery_tms_settings']['accounts'];
   foreach ($accounts_posted as $composite_key => $value) {
     // If we don't have a value we don't want to do anything.
     if (isset($value) && !empty($value)) {
@@ -200,17 +200,17 @@ function govdelivery_settings_submit($form, $postinfo) {
       "fromname" => $new_account['fromname'],
     );
   }
-  $govdelivery_odm_settings['accounts'] = $account_settings;
+  $govdelivery_tms_settings['accounts'] = $account_settings;
 
   // Default username for mail accounts.
-  $govdelivery_odm_settings['default_username'] = $postinfo['values']['govdelivery_odm_settings']['default_username'];
+  $govdelivery_tms_settings['default_username'] = $postinfo['values']['govdelivery_tms_settings']['default_username'];
 
   // Server.
-  $server = $postinfo['values']['govdelivery_odm_settings']['server'];
-  $govdelivery_odm_settings['server'] = check_url($server);
+  $server = $postinfo['values']['govdelivery_tms_settings']['server'];
+  $govdelivery_tms_settings['server'] = check_url($server);
 
   // REST auth token.
-  $govdelivery_odm_settings['auth_token'] = $postinfo['values']['govdelivery_odm_settings']['auth_token'];
+  $govdelivery_tms_settings['auth_token'] = $postinfo['values']['govdelivery_tms_settings']['auth_token'];
 
   // Temporarily comment out Subscription URL handling.
   // TODO -- restore this functionality.
@@ -231,22 +231,22 @@ function govdelivery_settings_submit($form, $postinfo) {
 
   // These come in as array place value so 0 or 1.
   // Queue Messages.
-  $govdelivery_odm_settings['queue'] = $postinfo['values']['govdelivery_odm_settings']['queue'];
+  $govdelivery_tms_settings['queue'] = $postinfo['values']['govdelivery_tms_settings']['queue'];
 
   // Messages cron.
-  $govdelivery_odm_settings['cron_odm'] = $postinfo['values']['govdelivery_odm_settings']['cron_odm'];
+  $govdelivery_tms_settings['cron_tms'] = $postinfo['values']['govdelivery_tms_settings']['cron_tms'];
 
   // Override From address.
-  $govdelivery_odm_settings['override_from'] = $postinfo['values']['govdelivery_odm_settings']['override_from'];
+  $govdelivery_tms_settings['override_from'] = $postinfo['values']['govdelivery_tms_settings']['override_from'];
 
   // Asynchronous Processing Max BID.
-  $govdelivery_odm_settings['max_bid'] = $postinfo['values']['govdelivery_odm_settings']['max_bid'];
+  $govdelivery_tms_settings['max_bid'] = $postinfo['values']['govdelivery_tms_settings']['max_bid'];
 
-  $govdelivery_odm_settings['external_cron_interval'] = $postinfo['values']['govdelivery_odm_settings']['external_cron_interval'];
+  $govdelivery_tms_settings['external_cron_interval'] = $postinfo['values']['govdelivery_tms_settings']['external_cron_interval'];
 
   // Mail Routing.
-  $govdelivery_odm_settings['enabled'] = $postinfo['values']['govdelivery_odm_settings']['enabled'];
-  if ($govdelivery_odm_settings['enabled'] == 1) {
+  $govdelivery_tms_settings['enabled'] = $postinfo['values']['govdelivery_tms_settings']['enabled'];
+  if ($govdelivery_tms_settings['enabled'] == 1) {
     $mail_system = variable_get('mail_system');
     $mail_system['default-system'] = 'GovDeliveryMailSystem';
     variable_set('mail_system', $mail_system);
@@ -261,7 +261,7 @@ function govdelivery_settings_submit($form, $postinfo) {
 
   // Save the validated changes.
   variable_set('govdelivery_subscription_settings', $govdelivery_subscription_settings);
-  variable_set('govdelivery_odm_settings', $govdelivery_odm_settings);
+  variable_set('govdelivery_tms_settings', $govdelivery_tms_settings);
 }
 
 /**
