@@ -18,7 +18,7 @@ function govdelivery_uninstall() {
   drupal_uninstall_schema('govdelivery_message_queue');
   drupal_uninstall_schema('govdelivery_subscription_queue');
   variable_del('smtp_library');
-  variable_del('govdelivery_odm_settings');
+  variable_del('govdelivery_tms_settings');
   variable_del('govdelivery_subscription_settings');
 }
 
@@ -75,9 +75,9 @@ function govdelivery_update_6003() {
   // sending messages and subscribing users to a list.
   $govdelivery_settings = variable_get('govdelivery_settings', array());
   if (isset($govdelivery_settings)) {
-    variable_set('govdelivery_odm_settings', $govdelivery_settings);
+    variable_set('govdelivery_tms_settings', $govdelivery_settings);
     variable_del('govdelivery_settings');
-    $ret[] = "Converted GovDelivery settings to use new naming that splits ODM from subscription settings";
+    $ret[] = "Converted GovDelivery settings to use new naming that splits TMS from subscription settings";
   }
 
   // Rename message send queue to reflect multiple queues.

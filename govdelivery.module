@@ -17,7 +17,7 @@ function govdelivery_perm() {
 function govdelivery_menu() {
   $items['admin/settings/govdelivery'] = array(
     'title' => 'GovDelivery settings',
-    'description' => 'Settings for GovDelivery to connect with the GovDelivery ODM and Subscription service.',
+    'description' => 'Settings for GovDelivery to connect with the GovDelivery TMS and Subscription service.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('govdelivery_settings'),
     'access arguments' => array('Manage GovDelivery settings'),
@@ -84,7 +84,7 @@ function govdelivery_mail($key, &$message, $params) {
  */
 function govdelivery_cron() {
   $govdelivery_subscription_settings = variable_get('govdelivery_subscription_settings', NULL);
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
 
   // If subscriptions cron is Enabled.
   if (isset($govdelivery_subscription_settings['cron_subscriptions']) && $govdelivery_subscription_settings['cron_subscriptions']) {
@@ -92,7 +92,7 @@ function govdelivery_cron() {
   }
 
   // If subscriptions cron is Enabled.
-  if (isset($govdelivery_odm_settings['cron_odm']) && $govdelivery_odm_settings['cron_odm']) {
+  if (isset($govdelivery_tms_settings['cron_tms']) && $govdelivery_tms_settings['cron_tms']) {
     $items_sent = govdelivery_process_message_queue();
   }
 }
@@ -383,7 +383,7 @@ function govdelivery_queue_remove($queue, $cid) {
  *   A message.
  */
 function govdelivery_send_message($message) {
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
   $sendsuccess = TRUE;
 
   # Get list of recipients.
@@ -412,14 +412,14 @@ function govdelivery_send_message($message) {
   }
 
   # Check which account is mapped.
-  $account = $govdelivery_odm_settings['default_username'];
+  $account = $govdelivery_tms_settings['default_username'];
   if (!isset($account) || empty($account)) {
     watchdog('govdelivery', "No default account specified.  Check 'Default mail username' in admin/settings/govdelivery.", NULL, WATCHDOG_ERROR);
     return FALSE;
   }
 
-  $from_address = $govdelivery_odm_settings['accounts'][$account]['fromname'];
-  if (isset($govdelivery_odm_settings['override_from']) && !empty($govdelivery_odm_settings['override_from'])) {
+  $from_address = $govdelivery_tms_settings['accounts'][$account]['fromname'];
+  if (isset($govdelivery_tms_settings['override_from']) && !empty($govdelivery_tms_settings['override_from'])) {
     if (!empty($message['from'])) {
       $from_address = $message['from'];
     }
@@ -435,10 +435,10 @@ function govdelivery_send_message($message) {
     $message_data['recipients'][] = array('email' => $recipient);
   }
   $data = json_encode($message_data);
-  $auth_token = $govdelivery_odm_settings['auth_token'];
+  $auth_token = $govdelivery_tms_settings['auth_token'];
   $headers = array('Content-Type' => 'application/json', 'X-AUTH-TOKEN' => $auth_token);
 
-  $server = $govdelivery_odm_settings['server'];
+  $server = $govdelivery_tms_settings['server'];
   $result = drupal_http_request($server . '/messages/email', $headers, 'POST', $data);
   // HTTP code for this?
   if ($result->code == 200 or $result->code == 201) {
@@ -479,11 +479,11 @@ function govdelivery_filter_email($address) {
  */
 function govdelivery_process_message($key, $message) {
   // Check preferences.
-  $govdelivery_odm_settings = variable_get('govdelivery_odm_settings', array());
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
   $send_success = FALSE;
 
   // Attempt to send immediately.
-  if (isset($govdelivery_odm_settings['queue']) && !$govdelivery_odm_settings['queue']) {
+  if (isset($govdelivery_tms_settings['queue']) && !$govdelivery_tms_settings['queue']) {
     $send_success = govdelivery_send_message($message);
 
     if ($send_success) {
