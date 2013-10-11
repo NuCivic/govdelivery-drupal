@@ -97,31 +97,34 @@ function govdelivery_settings($form, &$form_state) {
         '#type' => "textfield",
         '#title' => 'Server',
         '#default_value' => (!empty($govdelivery_odm_settings['server']) ? check_url($govdelivery_odm_settings['server']) : ''),
+        '#description' => t('Enter the URL of your GovDelivery TMS instance. It must begin with "https." Example: https://yourserver.govdelivery.com'),
       ),
       'auth_token' => array(
         '#type' => "textfield",
-        '#title' => t('Auth token for ODM service'),
+        '#title' => t('Auth token'),
         '#default_value' => (!empty($govdelivery_odm_settings['auth_token']) ? $govdelivery_odm_settings['auth_token'] : ''),
+        '#description' => t('Enter the authentication token needed to send emails through your GovDelivery TMS service. If you do not have an authentication token, please content your GovDelivery account representative.'),
       ),
       'enabled' => array(
         '#type' => 'radios',
-        '#default_value' => (isset($govdelivery_odm_settings['enabled']) ? $govdelivery_odm_settings['enabled'] : 0),
-        '#title' => t('Outbound mail rerouting'),
+        '#default_value' => (isset($govdelivery_odm_settings['enabled']) ? $govdelivery_odm_settings['enabled'] : 1),
+        '#title' => t('Use TMS for Outbound Mail'),
         '#options' => array('Disabled', 'Enabled'),
+        '#description' => t('If this option is enabled, emails from your Drupal site will be sent using GovDelivery\'s Transactional Message Service (TMS). If it is disabled, emails we be sent using Drupal\'s standard SMTP-based email system.'),
       ),
       'queue' => array(
         '#type' => 'radios',
         '#default_value' => (isset($govdelivery_odm_settings['queue']) ? $govdelivery_odm_settings['queue'] : 1),
-        '#title' => t('Queue messages'),
+        '#title' => t('Queue Mail for High Volume'),
         '#options' => array('Disabled', 'Enabled'),
-        '#description' => t('Messages that fail to send are queued regardless of this setting.'),
+        '#description' => t('If this option is enabled, messages will be placed in a queue for delivery rather than be sent immediately. (Messages that fail to send will be queued anyway for later delivery.)'),
       ),
       'cron_odm' => array(
         '#type' => 'radios',
         '#default_value' => (isset($govdelivery_odm_settings['cron_odm']) ? $govdelivery_odm_settings['cron_odm'] : 1),
         '#title' => t('Messages cron'),
         '#options' => array('Disabled', 'Enabled'),
-        '#description' => t('Will automatically resend the messages queue on cron runs.'),
+        '#description' => t('Will automatically resend the messages queue when cron runs.'),
       ),
       'override_from' => array(
         '#type' => 'radios',
@@ -141,11 +144,14 @@ function govdelivery_settings($form, &$form_state) {
         '#default_value' => (isset($govdelivery_odm_settings['external_cron_interval']) ? $govdelivery_odm_settings['external_cron_interval'] : 120),
       ),
     ),
-    'govdelivery_subscription_settings' => $subscription_fieldset,
+    // Commenting out the GovDelivery subscription settings for now.
+    // TODO -- re-enable these and document the functionality properly.
+/*    'govdelivery_subscription_settings' => $subscription_fieldset,
     'save' => array(
       '#type' => 'submit',
       '#value' => 'Save configuration',
     ),
+// */
   );
   return $form;
 }
@@ -206,9 +212,22 @@ function govdelivery_settings_submit($form, $postinfo) {
   // REST auth token.
   $govdelivery_odm_settings['auth_token'] = $postinfo['values']['govdelivery_odm_settings']['auth_token'];
 
+  // Temporarily comment out Subscription URL handling.
+  // TODO -- restore this functionality.
+/*
   // Subscription URL.
   $service_url = $postinfo['values']['govdelivery_subscription_settings']['service_url'];
   $govdelivery_subscription_settings['service_url'] = check_url($service_url);
+
+  // Subscriptions Cron.
+  $govdelivery_subscription_settings['cron_subscriptions'] = $postinfo['values']['govdelivery_subscription_settings']['cron_subscriptions'];
+
+  // Subscriber API Base URL.
+  $govdelivery_subscription_settings['subscriber_api_url_base'] = $postinfo['values']['govdelivery_subscription_settings']['subscriber_api_url_base'];
+
+  // Default Category ID when creating new topics.
+  $govdelivery_subscription_settings['default_topic_category_id'] = $postinfo['values']['govdelivery_subscription_settings']['default_topic_category_id'];
+// */
 
   // These come in as array place value so 0 or 1.
   // Queue Messages.
@@ -219,15 +238,6 @@ function govdelivery_settings_submit($form, $postinfo) {
 
   // Override From address.
   $govdelivery_odm_settings['override_from'] = $postinfo['values']['govdelivery_odm_settings']['override_from'];
-
-  // Subscriptions Cron.
-  $govdelivery_subscription_settings['cron_subscriptions'] = $postinfo['values']['govdelivery_subscription_settings']['cron_subscriptions'];
-
-  // Subscriber API Base URL.
-  $govdelivery_subscription_settings['subscriber_api_url_base'] = $postinfo['values']['govdelivery_subscription_settings']['subscriber_api_url_base'];
-
-  // Default Category ID when creating new topics.
-  $govdelivery_subscription_settings['default_topic_category_id'] = $postinfo['values']['govdelivery_subscription_settings']['default_topic_category_id'];
 
   // Asynchronous Processing Max BID.
   $govdelivery_odm_settings['max_bid'] = $postinfo['values']['govdelivery_odm_settings']['max_bid'];
