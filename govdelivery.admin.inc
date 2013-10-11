@@ -114,14 +114,14 @@ function govdelivery_settings($form, &$form_state) {
       ),
       'queue' => array(
         '#type' => 'radios',
-        '#default_value' => (isset($govdelivery_tms_settings['queue']) ? $govdelivery_tms_settings['queue'] : 1),
+        '#default_value' => (isset($govdelivery_tms_settings['queue']) ? $govdelivery_tms_settings['queue'] : 0),
         '#title' => t('Queue Mail for High Volume'),
         '#options' => array('Disabled', 'Enabled'),
         '#description' => t('If this option is enabled, messages will be placed in a queue for delivery rather than be sent immediately. (Messages that fail to send will be queued anyway for later delivery.)'),
       ),
       'cron_tms' => array(
         '#type' => 'radios',
-        '#default_value' => (isset($govdelivery_tms_settings['cron_tms']) ? $govdelivery_tms_settings['cron_tms'] : 1),
+        '#default_value' => (isset($govdelivery_tms_settings['cron_tms']) ? $govdelivery_tms_settings['cron_tms'] : 0),
         '#title' => t('Messages cron'),
         '#options' => array('Disabled', 'Enabled'),
         '#description' => t('Will automatically resend the messages queue when cron runs.'),
@@ -146,12 +146,11 @@ function govdelivery_settings($form, &$form_state) {
     ),
     // Commenting out the GovDelivery subscription settings for now.
     // TODO -- re-enable these and document the functionality properly.
-/*    'govdelivery_subscription_settings' => $subscription_fieldset,
+    // 'govdelivery_subscription_settings' => $subscription_fieldset,
     'save' => array(
       '#type' => 'submit',
       '#value' => 'Save configuration',
     ),
-// */
   );
   return $form;
 }
