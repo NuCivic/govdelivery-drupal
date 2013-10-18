@@ -1,7 +1,8 @@
 name = GovDelivery Subscription Integration
-description = Provides a Webform 3 component for subscribing to GovDelivery mailing lists.
+description = Provides a Webform 3 component for subscribing to GovDelivery mailing lists. NOT TESTED YET FOR PRODUCTION USE.
 package = GovDelivery
 core = 7.x
 
 dependencies[] = govdelivery
 dependencies[] = webform
+dependencies[] = needs_testing
