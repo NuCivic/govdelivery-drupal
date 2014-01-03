@@ -30,6 +30,7 @@ function govdelivery_message_queue_report() {
   $query = db_select('govdelivery_message_queue', 'q')
     ->extend('PagerDefault')
     ->extend('TableSort')
+    ->orderByHeader($header)
     ->limit(30)
     ->fields('q', array('created', 'cid'))
     ->groupBy('created')
