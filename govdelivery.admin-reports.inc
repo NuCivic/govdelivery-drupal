@@ -48,7 +48,7 @@ function govdelivery_message_queue_report() {
       $subject_link = l($subject_text, 'admin/reports/govdelivery_message_queue/details/' . $queuedmessage->cid);
       $rows[] = array(
         $subject_link,
-        $queuedmessage->created,
+        format_date($queuedmessage->created),
         check_plain($queuedmessage->data['id']),
       );
     }
