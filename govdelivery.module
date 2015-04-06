@@ -439,40 +439,45 @@ function govdelivery_queue_get($queue, $cid) {
  */
 function govdelivery_queue_set($queue, $cid, $data) {
   $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
+  if (!empty($govdelivery_tms_settings)) {
+    $serialized = 0;
+    if (is_object($data) || is_array($data)) {
+      $data = serialize($data);
+      $serialized = 1;
+    }
 
-  $serialized = 0;
-  if (is_object($data) || is_array($data)) {
-    $data = serialize($data);
-    $serialized = 1;
-  }
-
-  $created = REQUEST_TIME;
-  try {
-    $random = rand(1, $govdelivery_tms_settings['max_bid']);
-    $query = db_update($queue);
-    $query->fields(array(
-        'data' => $data,
-        'created' => $created,
-        'serialized' => $serialized,
-        'bid' => $random,
-      ));
-    $query->condition('cid', $cid);
-    $num_updated = $query->execute();
-
-    if ($num_updated <= 0) {
-      db_insert($queue)
-        ->fields(array(
-          'cid' => $cid,
+    $created = REQUEST_TIME;
+    try {
+      $random = rand(1, $govdelivery_tms_settings['max_bid']);
+      $query = db_update($queue);
+      $query->fields(array(
           'data' => $data,
           'created' => $created,
           'serialized' => $serialized,
           'bid' => $random,
-        ))
-        ->execute();
+        ));
+      $query->condition('cid', $cid);
+      $num_updated = $query->execute();
+
+      if ($num_updated <= 0) {
+        db_insert($queue)
+          ->fields(array(
+            'cid' => $cid,
+            'data' => $data,
+            'created' => $created,
+            'serialized' => $serialized,
+            'bid' => $random,
+          ))
+          ->execute();
+      }
+    }
+    catch (Exception $e) {
+      print_r($e);
+      watchdog('govdelivery', 'Queue Set Error: @e', array('@e' => $e->getMessage()), WATCHDOG_NOTICE);
     }
   }
-  catch (Exception $e) {
-    watchdog('govdelivery', 'Queue Set Error: @e', array('@e' => $e->getMessage()), WATCHDOG_NOTICE);
+  else {
+    drupal_set_message(t('You must configure govdelivery TMS in order to use it'), 'status', FALSE);
   }
 }
 
@@ -560,22 +565,27 @@ function govdelivery_filter_email($address) {
  */
 function govdelivery_process_message($key, $message) {
   // Check preferences.
-  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
-  $send_success = FALSE;
-  // Attempt to send immediately.
-  if (isset($govdelivery_tms_settings['queue']) && !$govdelivery_tms_settings['queue']) {
-    $send_success = govdelivery_send_message($message);
-    if ($send_success) {
-      watchdog('govdelivery', 'Successfully sent a message immediately.', array(), WATCHDOG_INFO);
+  if (is_array($message)) {
+    $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
+    $send_success = FALSE;
+    // Attempt to send immediately.
+    if (isset($govdelivery_tms_settings['queue']) && !$govdelivery_tms_settings['queue']) {
+      $send_success = govdelivery_send_message($message);
+      if ($send_success) {
+        watchdog('govdelivery', 'Successfully sent a message immediately.', array(), WATCHDOG_INFO);
+      }
+    }
+
+    // Queue the message if:
+    // 1. Failure to send immediately.
+    // 2. Queue preferences haven't been set.
+    // 3. Queue is enabled.
+    if (!$send_success) {
+      govdelivery_queue_set('govdelivery_message_queue', $key, $message);
     }
   }
-
-  // Queue the message if:
-  // 1. Failure to send immediately.
-  // 2. Queue preferences haven't been set.
-  // 3. Queue is enabled.
-  if (!$send_success) {
-    govdelivery_queue_set('govdelivery_message_queue', $key, $message);
+  else {
+    watchdog('govdelivery', 'Bad message data got to the process message function.', array(), WATCHDOG_WARNING);
   }
 }
 
@@ -679,7 +689,7 @@ function govdelivery_send_message($message) {
   $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array());
   $sendsuccess = FALSE;
 
-    # Get list of recipients.
+  # Get list of recipients.
   $recipients = array();
   if (is_array($message["to"])) {
     foreach ($message["to"] as $address) {

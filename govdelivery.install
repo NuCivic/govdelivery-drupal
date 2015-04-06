@@ -5,7 +5,7 @@
  */
 
 /**
- * Uninstallation.
+ * Implements hook_uninstall().
  */
 function govdelivery_uninstall() {
   $mail_system = variable_get('mail_system');
@@ -15,6 +15,36 @@ function govdelivery_uninstall() {
   }
   variable_del('govdelivery_tms_settings');
   variable_del('govdelivery_subscription_settings');
+}
+
+/**
+ * Implements hook_enable().
+ */
+function govdelivery_enable() {
+  $govdelivery_tms_settings = variable_get('govdelivery_tms_settings', array('enabled' => 0));
+  if ($govdelivery_tms_settings['enabled'] == 1) {
+    $mail_system = variable_get('mail_system');
+    $mail_system['default-system'] = 'GovDeliveryMailSystem';
+    variable_set('mail_system', $mail_system);
+  }
+  else {
+    $mail_system = variable_get('mail_system');
+    if (isset($mail_system) && !empty($mail_system['default-system'])) {
+      $mail_system['default-system'] = 'DefaultMailSystem';
+      variable_set('mail_system', $mail_system);
+    }
+  }
+}
+
+/**
+ * Implements hook_disable().
+ */
+function govdelivery_disable() {
+  $mail_system = variable_get('mail_system');
+  if (isset($mail_system) && !empty($mail_system)) {
+    $mail_system['default-system'] = 'DefaultMailSystem';
+    variable_set('mail_system', $mail_system);
+  }
 }
 
 /**
